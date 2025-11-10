@@ -1,3 +1,4 @@
+#!/home/jpcostel/Projects/xmas_lights/.venv/bin/python3
 import board
 import neopixel
 
