@@ -1,6 +1,7 @@
 #!/home/jpcostel/Projects/xmas_lights/.venv/bin/python3
 import board
 import neopixel
+import timee
 
 SPINES = 1
 RINGS = 10
