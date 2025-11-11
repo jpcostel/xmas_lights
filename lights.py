@@ -47,7 +47,7 @@ def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
 
 # example test pattern
 try:
-    gaps = (2,3,4,5,10,15,20)
+    gaps = (2,3,4,5,10,15,25,35,45)
     while True:
         for g in gaps:
             for i in range(20):
