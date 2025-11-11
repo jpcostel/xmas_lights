@@ -47,12 +47,12 @@ def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
 
 # example test pattern
 try:
-    gaps = (2,6)
+    gaps = (2,3,4,5,10,15,20)
     while True:
         for g in gaps:
-            for i in range(50):
+            for i in range(20):
                 fifo(pixels, gap=g, offset=i)
-                time.sleep(0.1)
+                time.sleep(0.15)
 
 except KeyboardInterrupt:
     print("\n👋 Exiting")
