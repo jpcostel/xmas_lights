@@ -35,15 +35,18 @@ def clear():
     pixels.show()
 
 def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
+    ci = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
     pixels.fill((0,0,0))
     gap = gap + 1
     for i in range(pixels.n):
+        index = i % 6
+        color = ci[index]
         if (i+offset) % gap == 0:
             pixels[i] = color
     pixels.show()
 
 # example test pattern
-gaps = (1,2,3,4)
+gaps = (2,6)
 while True:
     for g in gaps:
         for i in range(50):
