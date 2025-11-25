@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+git add *
+git commit -m "syncing latest changes"
+git push

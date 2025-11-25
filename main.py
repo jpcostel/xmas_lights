@@ -59,5 +59,5 @@ def main():
         pixels.fill((0,0,0))
         pixels.show()
 
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
