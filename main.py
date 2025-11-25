@@ -57,8 +57,10 @@ def main():
 
     except KeyboardInterrupt:
         print("\n👋 Exiting")
-        pixels.fill((0,0,0))
-        pixels.show()
+        pixels1.fill((0,0,0))
+        pixels2.fill((0,0,0))
+        pixels1.show()
+        pixels2.show()
 
 if __name__ == '__main__':
     main()
