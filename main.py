@@ -2,15 +2,14 @@
 import board
 import neopixel
 import time
+import wiring 
 
-SPINES = 1
-RINGS = 10
-PIXELS_PER_SPINE = 50
 
 # total pixels in entire tree
-NUM_PIXELS = SPINES * PIXELS_PER_SPINE
+PIX_PER_LINE = 50
 
-pixels = neopixel.NeoPixel(board.D18, NUM_PIXELS, auto_write=False, brightness=0.5)
+pixels1 = neopixel.NeoPixel(board.D18, PIX_PER_LINE, auto_write=False, brightness=0.5)
+pixels2 = neopixel.NeoPixel(board.D19, PIX_PER_LINE, auto_write=False, brightness=0.5)
 
 def pixel_index(spine, ring):
     """
@@ -20,10 +19,10 @@ def pixel_index(spine, ring):
     """
     if spine % 2 == 0:
         # even -> runs top down
-        return spine * PIXELS_PER_SPINE + ring
+        return spine * PIX_PER_LINE + ring
     else:
         # odd -> runs bottom up
-        return spine * PIXELS_PER_SPINE + (PIXELS_PER_SPINE - ring - 1)
+        return spine * PIX_PER_LINE + (PIX_PER_LINE - ring - 1)
 
 def set_pixel(spine, ring, color):
     idx = pixel_index(spine, ring)
@@ -45,17 +44,20 @@ def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
             pixels[i] = color
     pixels.show()
 
-# example test pattern
-try:
-    gaps = (2,3,4,5,10,15,25,35,45)
-    while True:
-        for g in gaps:
-            for i in range(20):
-                fifo(pixels, gap=g, offset=i)
-                time.sleep(0.15)
+def main():
+    # example test pattern
+    try:
+        gaps = (2,3,4,5,10,15,25,35,45)
+        while True:
+            for g in gaps:
+                for i in range(20):
+                    fifo(pixels, gap=g, offset=i)
+                    time.sleep(0.15)
 
-except KeyboardInterrupt:
-    print("\n👋 Exiting")
-    pixels.fill((0,0,0))
-    pixels.show()
+    except KeyboardInterrupt:
+        print("\n👋 Exiting")
+        pixels.fill((0,0,0))
+        pixels.show()
 
+if __name__ == 'main':
+    main()
