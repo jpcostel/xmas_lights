@@ -51,7 +51,8 @@ def main():
         while True:
             for g in gaps:
                 for i in range(20):
-                    fifo(pixels, gap=g, offset=i)
+                    fifo(pixels1, gap=g, offset=i)
+                    fifo(pixels2, gap=g, offset=i)
                     time.sleep(0.15)
 
     except KeyboardInterrupt:
