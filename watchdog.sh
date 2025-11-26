@@ -2,8 +2,10 @@ MODE_FILE="/tmp/current_led_mode"
 PID_FILE="/tmp/webserver_pid"
 LOG="/tmp/webserver.log"
 
-SCRIPT_DIR=`pwd`
-PYTHON=`pwd`/.venv/bin/python3
+SCRIPT_DIR="/home/jpcostel/Projects/xmas_lights/"
+PYTHON=$SCRIPT_DIR/.venv/bin/python3
+
+cd $SCRIPT_DIR
 
 while true; do
     if [ -f "$PID_FILE" ]; then

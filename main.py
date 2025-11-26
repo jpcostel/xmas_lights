@@ -88,7 +88,7 @@ def main():
     clear(strips)
     args = parse_args()
     try:
-        if args.twinkle:
+        if args.xmas_twinkle:
             pulse.twinkle_stars(strips, 150)
         elif args.pulse:
             pulse.pulse_all(strips)
