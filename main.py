@@ -84,7 +84,7 @@ def main():
             while True:
                 for g in gaps:
                     for i in range(20):
-                        effects.fifo(strips, gap=g, offset=i)
+                        effects.blink(strips, gap=g, offset=i)
                         time.sleep(0.15)
         elif args.twinkle:
             # pulse.xmas_twinkle()

@@ -124,7 +124,7 @@ def twinkle_stars(strips, num_stars=75):
 # -------------------------
 # Move lights along each string 
 # -------------------------
-def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
+def blink(strips, gap=2, offset=0, color=(0,0,255), sleep=0.1):
     ci = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
     gap = gap + 1
     for strip in strips:
