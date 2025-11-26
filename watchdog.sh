@@ -12,6 +12,8 @@ INTERVAL=30
 
 echo "$(date '+%Y-%m-%d %H:%M:%S')  Watchdog started." >> "$LOGFILE"
 
+sudo ./venv/bin/python3 "$SCRIPT"
+
 while true; do
     # Look for a running instance of main.py
     PID=$(pgrep -f "$SCRIPT")
