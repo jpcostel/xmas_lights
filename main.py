@@ -2,7 +2,9 @@
 import board
 import neopixel
 import time
+import argparse
 import wiring 
+import pulse
 
 
 # total pixels in entire tree
@@ -44,16 +46,71 @@ def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
             pixels[i] = color
     pixels.show()
 
+def parse_args():
+    """
+    Parse binary command-line options:
+    --twinkle
+    --pulse
+    --xmas
+    --xmas_twinkle
+
+    Returns an argparse.Namespace with Boolean fields.
+    """
+
+    parser = argparse.ArgumentParser(
+        description="LED Effects Controller"
+    )
+
+    parser.add_argument(
+        "--twinkle",
+        action="store_true",
+        help="Enable twinkle effect", 
+        default=True
+    )
+
+    parser.add_argument(
+        "--pulse",
+        action="store_true",
+        help="Enable global pulse effect", 
+        default=False
+    )
+
+    parser.add_argument(
+        "--xmas",
+        action="store_true",
+        help="Enable Xmas animation", 
+        default=False
+    )
+
+    parser.add_argument(
+        "--xmas_twinkle",
+        action="store_true",
+        help="Enable Xmas-style twinkling",
+        default=False
+    )
+
+    # Parse and return
+    return parser.parse_args()
+
+
 def main():
     # example test pattern
+    args = parse_args()
     try:
-        gaps = (2,3,4,5,10,15,25,35,45)
-        while True:
-            for g in gaps:
-                for i in range(20):
-                    fifo(pixels1, gap=g, offset=i)
-                    fifo(pixels2, gap=g, offset=i)
-                    time.sleep(0.15)
+        if args.twinkle:
+            pulse.twinkle_stars(150)
+        elif args.pulse:
+            pulse.pulse_all()
+        elif args.xmas:
+            gaps = (2,3,4,5,10,15,25,35,45)
+            while True:
+                for g in gaps:
+                    for i in range(20):
+                        fifo(pixels1, gap=g, offset=i)
+                        fifo(pixels2, gap=g, offset=i)
+                        time.sleep(0.15)
+        elif args.xmas_twinkle
+            
 
     except KeyboardInterrupt:
         print("\n👋 Exiting")
