@@ -109,7 +109,8 @@ def main():
                         fifo(pixels1, gap=g, offset=i)
                         fifo(pixels2, gap=g, offset=i)
                         time.sleep(0.15)
-        elif args.xmas_twinkle
+        elif args.xmas_twinkle:
+            pulse.xmas_twinkle()
             
 
     except KeyboardInterrupt:
