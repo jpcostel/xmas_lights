@@ -85,6 +85,7 @@ def parse_args():
 
 def main():
     # example test pattern
+    clear(strips)
     args = parse_args()
     try:
         if args.twinkle:
