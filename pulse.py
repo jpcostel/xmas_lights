@@ -100,7 +100,7 @@ def twinkle_stars(strips, num_stars=75):
     t0 = time.time()
 
     # keep background off unless you want a color
-    all_pixels((0, 0, 0))
+    all_pixels(strips, (182,86,42)) # Thanksgiving Orange
 
     while True:
         t = time.time() - t0
@@ -115,9 +115,10 @@ def twinkle_stars(strips, num_stars=75):
             b = raw ** 2.2
 
             val = int(255 * b)
-            strips[strand][pixel] = (val, val, (val/255)*16)
+            # (219,186,51) thanksgiving yellow
+            strips[strand][pixel] = ((val/255)*219, (val/255)*186, (val/255)*51)
 
-        show_all()
+        show_all(strips)
         time.sleep(0.01)  # smooth 100 FPS update
 
 
