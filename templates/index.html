@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LED Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .btn {
+            display: block;
+            width: 90%;
+            margin: 15px auto;
+            padding: 20px;
+            font-size: 24px;
+            border-radius: 12px;
+            background: #eee;
+            border: 2px solid #333;
+            text-decoration: none;
+            color: black;
+        }
+        .current {
+            background: #c2f0c2;
+            border-color: green;
+        }
+    </style>
+</head>
+<body>
+    <h2>LED Control</h2>
+    <p>Current mode: <b>{{ mode }}</b></p>
+
+    <a class="btn {% if mode=='twinkle' %}current{% endif %}" href="/set/twinkle">Twinkle</a>
+    <a class="btn {% if mode=='pulse' %}current{% endif %}" href="/set/pulse">Pulse</a>
+    <a class="btn {% if mode=='xmas' %}current{% endif %}" href="/set/xmas">Xmas</a>
+    <a class="btn {% if mode=='xmas_twinkle' %}current{% endif %}" href="/set/xmas_twinkle">Xmas Twinkle</a>
+</body>
+</html>
