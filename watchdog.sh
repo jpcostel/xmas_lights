@@ -1,7 +1,9 @@
 MODE_FILE="/tmp/current_led_mode"
 PID_FILE="/tmp/webserver_pid"
+LOG="/tmp/webserver.log"
 
 SCRIPT_DIR=`pwd`
+PYTHON=`pwd`/.venv/bin/python3
 
 while true; do
     if [ -f "$PID_FILE" ]; then
@@ -17,7 +19,7 @@ while true; do
 
     # process dead — relaunch
     echo "Restarting webserver"
-    sudo $SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/webserver.py &
+    nohup sudo $PYTHON $SCRIPT_DIR/webserver.py $LOG 2>&1 &
     echo $! > $PID_FILE
 
     sleep 30
