@@ -1,5 +1,5 @@
 MODE_FILE="/tmp/current_led_mode"
-PID_FILE="/tmp/main_py_pid"
+PID_FILE="/tmp/webserver_pid"
 
 SCRIPT_DIR = `pwd`
 
@@ -11,23 +11,13 @@ while true; do
             continue
         fi
     else 
-        PID=`pgrep main.py`
-        echo 
+        PID=`pgrep webserver.py`
+        echo $PID > $PID_FILE
     fi
 
-    # process dead — relaunch with saved mode
-    MODE=$(cat "$MODE_FILE")
-
-    case "$MODE" in
-        twinkle) FLAG="--twinkle" ;;
-        pulse) FLAG="--pulse" ;;
-        xmas) FLAG="--xmas" ;;
-        xmas_twinkle) FLAG="--xmas_twinkle" ;;
-        *) FLAG="--twinkle" ;;
-    esac
-
-    echo "Restarting main.py with mode $FLAG"
-    sudo $SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/main.py $FLAG &
+    # process dead — relaunch
+    echo "Restarting webserver"
+    sudo $SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/webserver.py &
     echo $! > $PID_FILE
 
     sleep 30

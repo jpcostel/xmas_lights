@@ -56,6 +56,7 @@ def launch_main_py(mode):
         "pulse": "--pulse",
         "xmas": "--xmas",
         "xmas_twinkle": "--xmas_twinkle",
+        "off": "--help",
     }
 
     flag = arg_map[mode]
