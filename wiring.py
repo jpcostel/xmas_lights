@@ -23,3 +23,19 @@ strips = [
     )
     for i in range(NUM_STRANDS)
 ]
+
+def all_pixels(color, strips):
+    """Set every pixel on every strand."""
+    for strip in strips:
+        strip.fill(color)
+
+
+def show_all(strips):
+    """Push updates to all strips."""
+    for strip in strips:
+        strip.show()
+
+
+def clear(strips):
+    all_pixels((0,0,0))
+    show_all(strips)
