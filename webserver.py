@@ -1,5 +1,3 @@
-#!/home/jpcostel/Projects/xmas_lights/.venv/bin/python3
-
 from flask import Flask, render_template, redirect, url_for
 import subprocess
 import os
@@ -87,4 +85,13 @@ def set_mode(mode):
     # 2. Kill running main.py
     kill_main_py()
 
-    # 3. Launch new main.py with
+    # 3. Launch new main.py with correct argument
+    launch_main_py(mode)
+
+    # 4. Load updated UI
+    return redirect(url_for("index"))
+
+
+if __name__ == "__main__":
+    # Bind to all interfaces so your phone can access it
+    app.run(host="0.0.0.0", port=5000)
