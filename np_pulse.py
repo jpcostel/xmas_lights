@@ -139,7 +139,7 @@ def twinkle_stars(num_stars=25):
             b = raw ** 2.2
 
             val = int(255 * b)
-            strips[strand][pixel] = (val, val, val)
+            strips[strand][pixel] = (val, val, (val/255)*16)
 
         show_all()
         time.sleep(0.01)  # smooth 100 FPS update
