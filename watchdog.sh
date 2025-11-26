@@ -22,7 +22,7 @@ while true; do
         echo "$(date '+%Y-%m-%d %H:%M:%S')  main.py not running. Restarting..." >> "$LOGFILE"
         
         # Start script in background
-        sudo ./venv/bin/python3 "$SCRIPT" >> "$LOGFILE" 2>&1 &
+        sudo "$SCRIPT" >> "$LOGFILE" 2>&1 &
     fi
 
     sleep "$INTERVAL"
