@@ -59,7 +59,7 @@ def pulse_all(strips, cycle_time=4.0):
             r, g, b = hsv_to_rgb(hue, 1.0, brightness)
 
             all_pixels(strips, (int(r), int(g), int(b)))
-            show_all()
+            show_all(strips)
             time.sleep(0.01)
 
 
