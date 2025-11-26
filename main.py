@@ -99,7 +99,7 @@ def main():
                     for g in gaps:
                         for i in range(20):
                             fifo(strip, gap=g, offset=i)
-                time.sleep(0.5)
+                    time.sleep(0.5)
         elif args.twinkle:
             # pulse.xmas_twinkle()
             pulse.twinkle_stars(strips, 150)
