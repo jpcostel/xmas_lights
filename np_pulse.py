@@ -108,29 +108,42 @@ class Star:
 
 def twinkle_stars(num_stars=25):
     """
-    Random scattered twinkling LEDs that pulse independently.
-    
-    num_stars: how many LEDs twinkle at once
+    Smooth, independent twinkling stars with no flicker or stutter.
+    Uses gamma-corrected sinusoidal brightness for natural sparkle.
     """
-    # pick random LED coordinates across both strands
+
+    # pick random LED coordinates
     stars = []
     for _ in range(num_stars):
         strand = random.randrange(NUM_STRANDS)
         index = random.randrange(PIXELS_PER_STRAND)
-        stars.append(Star(strand, index))
+        phase = random.random() * 2 * math.pi
+        speed = random.uniform(0.5, 2.0)  # slower = smoother and more elegant
+        stars.append((strand, index, phase, speed))
 
     t0 = time.time()
 
+    # keep background off unless you want a color
+    all_pixels((0, 0, 0))
+
     while True:
         t = time.time() - t0
-        clear()
 
-        for s in stars:
-            r, g, b = s.color(t)
-            strips[s.strand][s.index] = (r, g, b)
+        # no more clearing — overwrite only the star LEDs
+        for strand, pixel, phase, speed in stars:
+
+            # smooth brightness 0–1
+            raw = 0.5 * (1 - math.cos(speed * t + phase))
+
+            # gamma correction
+            b = raw ** 2.2
+
+            val = int(255 * b)
+            strips[strand][pixel] = (val, val, val)
 
         show_all()
-        time.sleep(0.02)
+        time.sleep(0.01)  # smooth 100 FPS update
+
 
 
 # -------------------------
