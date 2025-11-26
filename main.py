@@ -82,11 +82,10 @@ def main():
         elif args.xmas:
             gaps = (2,3,5,8)
             while True:
-                for strip in strips:
-                    for g in gaps:
-                        for i in range(20):
-                            fifo(strip, gap=g, offset=i)
-                            time.sleep(0.15)
+                for g in gaps:
+                    for i in range(20):
+                        effects.fifo(strips, gap=g, offset=i)
+                        time.sleep(0.15)
         elif args.twinkle:
             # pulse.xmas_twinkle()
             effects.twinkle_stars(strips, 150)
