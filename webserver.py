@@ -1,3 +1,5 @@
+#!/home/jpcostel/Projects/xmas_lights/.venv/bin/python3
+
 from flask import Flask, render_template, redirect, url_for
 import subprocess
 import os
