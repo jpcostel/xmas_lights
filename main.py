@@ -4,7 +4,7 @@ import neopixel
 import time
 import argparse
 import wiring 
-import pulse
+import effects
 
 
 # -------------------------
@@ -22,19 +22,6 @@ NUM_STRANDS = wiring.NUM_STRANDS
 all_pixels = wiring.all_pixels
 show_all = wiring.show_all
 clear = wiring.clear
-
-
-
-def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
-    ci = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
-    pixels.fill((0,0,0))
-    gap = gap + 1
-    for i in range(pixels.n):
-        index = i % 6
-        color = ci[index]
-        if (i+offset) % gap == 0:
-            pixels[i] = color
-    pixels.show()
 
 def parse_args():
     """
@@ -89,11 +76,11 @@ def main():
     args = parse_args()
     try:
         if args.xmas_twinkle:
-            pulse.twinkle_stars(strips, 150)
+            effects.twinkle_stars(strips, 150)
         elif args.pulse:
-            pulse.pulse_all(strips)
+            effects.pulse_all(strips)
         elif args.xmas:
-            gaps = (2,3,4,5,10,15,25,35,45)
+            gaps = (2,3,5,8)
             while True:
                 for strip in strips:
                     for g in gaps:
@@ -102,7 +89,7 @@ def main():
                             time.sleep(0.15)
         elif args.twinkle:
             # pulse.xmas_twinkle()
-            pulse.twinkle_stars(strips, 150)
+            effects.twinkle_stars(strips, 150)
 
 
     except KeyboardInterrupt:
