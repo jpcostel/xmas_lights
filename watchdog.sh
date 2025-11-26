@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Path to your project
-SCRIPT_DIR="/home/pi/neotree"
+SCRIPT_DIR=`pwd`
 SCRIPT="$SCRIPT_DIR/main.py"
 
 # Log file
@@ -20,7 +20,7 @@ while true; do
         echo "$(date '+%Y-%m-%d %H:%M:%S')  main.py not running. Restarting..." >> "$LOGFILE"
         
         # Start script in background
-        /usr/bin/python3 "$SCRIPT" >> "$LOGFILE" 2>&1 &
+        sudo ./venv/bin/python3 "$SCRIPT" >> "$LOGFILE" 2>&1 &
     fi
 
     sleep "$INTERVAL"
