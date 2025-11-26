@@ -12,7 +12,7 @@ INTERVAL=30
 
 echo "$(date '+%Y-%m-%d %H:%M:%S')  Watchdog started." >> "$LOGFILE"
 
-sudo ./venv/bin/python3 "$SCRIPT"
+sudo "$SCRIPT"
 
 while true; do
     # Look for a running instance of main.py
