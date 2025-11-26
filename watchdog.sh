@@ -1,7 +1,7 @@
 MODE_FILE="/tmp/current_led_mode"
 PID_FILE="/tmp/webserver_pid"
 
-SCRIPT_DIR = `pwd`
+SCRIPT_DIR=`pwd`
 
 while true; do
     if [ -f "$PID_FILE" ]; then
