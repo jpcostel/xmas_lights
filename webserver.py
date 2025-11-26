@@ -64,7 +64,7 @@ def launch_main_py(mode):
 
     # Launch detached background process
     p = subprocess.Popen(
-        ["python3", "/home/jpcostel/Projects/xmas_lights/main.py", flag],
+        ["sudo", "/home/jpcostel/Projects/xmas_lights/.venv/bin/python3", "/home/jpcostel/Projects/xmas_lights/main.py", flag],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
