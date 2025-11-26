@@ -126,9 +126,9 @@ def twinkle_stars(strips, num_stars=75):
 # -------------------------
 def fifo(pixels, gap=2, offset=0, color=(0,0,255), sleep=0.1):
     ci = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
-    pixels.fill((0,0,0))
     gap = gap + 1
     for strip in strips:
+        strip.fill((0,0,0))
         for i in range(pixels.n):
             index = i % 6
             color = ci[index]
