@@ -3,57 +3,33 @@ import math
 import random
 import board
 import neopixel
+import wiring
+
+
 
 # -------------------------
 # HARDWARE CONFIG
 # -------------------------
 
-PIXELS_PER_STRAND = 100
-NUM_STRANDS = 2
-
-DATA_PINS = [
-    board.D18,   # Strand 0
-    board.D19,   # Strand 1
-]
-
-# Initialize strips
-strips = [
-    neopixel.NeoPixel(
-        DATA_PINS[i],
-        PIXELS_PER_STRAND,
-        auto_write=False,
-        pixel_order=neopixel.GRB
-    )
-    for i in range(NUM_STRANDS)
-]
+strips = wiring.strips
+PIXELS_PER_STRAND = wiring.PIXELS_PER_STRAND
+NUM_STRANDS = wiring.NUM_STRANDS
 
 
 # -------------------------
 # UTILITY FUNCTIONS
 # -------------------------
 
-def all_pixels(color, strips):
-    """Set every pixel on every strand."""
-    for strip in strips:
-        strip.fill(color)
-
-
-def show_all(strips):
-    """Push updates to all strips."""
-    for strip in strips:
-        strip.show()
-
-
-def clear(strips):
-    all_pixels((0,0,0))
-    show_all(strips)
+all_pixels = wiring.all_pixels
+show_all = wiring.show_all
+clear = wiring.clear
 
 
 # -------------------------
 # 1. GLOBAL BREATHING / COLOR-CYCLING PULSE
 # -------------------------
 
-def pulse_all(cycle_time=4.0, strips):
+def pulse_all(strips, cycle_time=4.0):
     """
     Slowly pulse ALL LEDs together.
     
@@ -106,7 +82,7 @@ class Star:
         return (int(255*b), int(255*b), int(255*b))  # white twinkles
 
 
-def twinkle_stars(num_stars=25):
+def twinkle_stars(strips, num_stars=75):
     """
     Smooth, independent twinkling stars with no flicker or stutter.
     Uses gamma-corrected sinusoidal brightness for natural sparkle.
