@@ -1,29 +1,34 @@
-#!/bin/bash
+MODE_FILE="/tmp/current_led_mode"
+PID_FILE="/tmp/main_py_pid"
 
-# Path to your project
-SCRIPT_DIR=`pwd`
-SCRIPT="$SCRIPT_DIR/main.py"
-
-# Log file
-LOGFILE="$SCRIPT_DIR/watchdog.log"
-
-# How often to check (seconds)
-INTERVAL=30
-
-echo "$(date '+%Y-%m-%d %H:%M:%S')  Watchdog started." >> "$LOGFILE"
-
-sudo "$SCRIPT"
+SCRIPT_DIR = `pwd`
 
 while true; do
-    # Look for a running instance of main.py
-    PID=$(pgrep -f "$SCRIPT")
-
-    if [ -z "$PID" ]; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S')  main.py not running. Restarting..." >> "$LOGFILE"
-        
-        # Start script in background
-        sudo "$SCRIPT" >> "$LOGFILE" 2>&1 &
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            sleep 30
+            continue
+        fi
+    else 
+        PID=`pgrep main.py`
+        echo 
     fi
 
-    sleep "$INTERVAL"
+    # process dead — relaunch with saved mode
+    MODE=$(cat "$MODE_FILE")
+
+    case "$MODE" in
+        twinkle) FLAG="--twinkle" ;;
+        pulse) FLAG="--pulse" ;;
+        xmas) FLAG="--xmas" ;;
+        xmas_twinkle) FLAG="--xmas_twinkle" ;;
+        *) FLAG="--twinkle" ;;
+    esac
+
+    echo "Restarting main.py with mode $FLAG"
+    sudo $SCRIPT_DIR/.venv/bin/python3 $SCRIPT_DIR/main.py $FLAG &
+    echo $! > $PID_FILE
+
+    sleep 30
 done

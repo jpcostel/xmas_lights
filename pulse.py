@@ -32,28 +32,28 @@ strips = [
 # UTILITY FUNCTIONS
 # -------------------------
 
-def all_pixels(color):
+def all_pixels(color, strips):
     """Set every pixel on every strand."""
     for strip in strips:
         strip.fill(color)
 
 
-def show_all():
+def show_all(strips):
     """Push updates to all strips."""
     for strip in strips:
         strip.show()
 
 
-def clear():
+def clear(strips):
     all_pixels((0,0,0))
-    show_all()
+    show_all(strips)
 
 
 # -------------------------
 # 1. GLOBAL BREATHING / COLOR-CYCLING PULSE
 # -------------------------
 
-def pulse_all(cycle_time=4.0):
+def pulse_all(cycle_time=4.0, strips):
     """
     Slowly pulse ALL LEDs together.
     
@@ -82,7 +82,7 @@ def pulse_all(cycle_time=4.0):
             # convert hue to RGB
             r, g, b = hsv_to_rgb(hue, 1.0, brightness)
 
-            all_pixels((int(r), int(g), int(b)))
+            all_pixels((int(r), int(g), int(b)), strips)
             show_all()
             time.sleep(0.01)
 
