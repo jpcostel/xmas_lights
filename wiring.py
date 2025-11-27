@@ -11,8 +11,8 @@ NUM_STRANDS = 4
 DATA_PINS = [
     board.D18,   # Strand 0
     board.D19,   # Strand 1
-    board.D20,   # Strand 2
-    board.D21    # Strand 3
+    board.D12,   # Strand 2
+    board.D13    # Strand 3
 ]
 
 # Initialize strips
