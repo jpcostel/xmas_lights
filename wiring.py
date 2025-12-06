@@ -1,4 +1,4 @@
-import board
+import machine
 import neopixel
 
 # -------------------------
@@ -8,22 +8,16 @@ import neopixel
 PIXELS_PER_STRAND = 50
 NUM_STRANDS = 4
 
-DATA_PINS = [
-    board.D18,   # Strand 0
-    board.D19,   # Strand 1
-    board.D12,   # Strand 2
-    board.D13    # Strand 3
-]
+PINS = [1,2,3,4]
 
 # Initialize strips
 strips = [
     neopixel.NeoPixel(
-        DATA_PINS[i],
+        machine.Pin(pin),
         PIXELS_PER_STRAND,
-        auto_write=False,
-        pixel_order=neopixel.GRB
+        auto_write=False
     )
-    for i in range(NUM_STRANDS)
+    for pin in PINS
 ]
 
 def colorize(strips):
