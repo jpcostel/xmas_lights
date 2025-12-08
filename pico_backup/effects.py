@@ -158,7 +158,7 @@ def twinkle_stars(strips, num_stars=25):
         show_all(strips)
         loop_end = time.time() # for pico version .ticks_ms()
         # print("Loop Time: {}".format(time.ticks_diff(loop_end, loop_start)))
-        time.sleep_ms(16 - (loop_start - loop_end))
+        time.sleep(0.016 - (loop_start - loop_end))
         # EVERY 5 SECONDS
         if (loop_end - t0) > 5000:
                 # REINITTIALIZE ALL LIGHTS
