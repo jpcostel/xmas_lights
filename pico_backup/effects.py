@@ -37,17 +37,17 @@ def pulse_all(strips, cycle_time=4.0):
     cycle_time: seconds per full bright→dim→bright cycle
     """
     hue = 0.0  # start color (0 = red)
-    cycle_ms = cycle_time * 1000
+    # for pico version cycle_ms = cycle_time * 1000
 
     while True:
-        start = time.ticks_ms()
+        start = time.time() # for pico version .ticks_ms()
 
         # use a sinusoidal breathing curve
         while True:
-            now = time.ticks_ms()
-            elapsed = time.ticks_diff(now, start)
+            now = time.time() # for pico version .ticks_ms()
+            elapsed = now - start
             
-            t = elapsed / cycle_ms
+            t = elapsed / cycle_time # for pico version cycle_ms
             if t >= 1.0:
                 break
 
@@ -63,7 +63,7 @@ def pulse_all(strips, cycle_time=4.0):
 
             all_pixels(strips, (int(r), int(g), int(b)))
             show_all(strips)
-            time.sleep_ms(10)
+            time.sleep(0.010)
 
 
 
@@ -108,12 +108,12 @@ def twinkle_stars(strips, num_stars=25):
     # We track stars by (strand, index, phase, speed)
     stars = get_stars(num_stars)
     
-    t0 = time.ticks_ms()
+    t0 = time.time() # for pico version .ticks_ms()
 
     while True:
         
-        loop_start = time.ticks_ms()
-        t = time.ticks_diff(loop_start, t0) / 1000
+        loop_start = time.time() # for pico version .ticks_ms()
+        t = loop_start - t0
 
         # --- OPTIMIZATION: DRAWING STRATEGY ---
         # Instead of 'colorize' looping over every pixel every frame (slow!),
@@ -156,9 +156,9 @@ def twinkle_stars(strips, num_stars=25):
             # print("Strand: {}\t\tIndex:{}\t\tFinal Color:{}".format(strand, index, final_color))
 
         show_all(strips)
-        loop_end = time.ticks_ms()
+        loop_end = time.time() # for pico version .ticks_ms()
         # print("Loop Time: {}".format(time.ticks_diff(loop_end, loop_start)))
-        time.sleep_ms(16 - time.ticks_diff(loop_start,loop_end))
+        time.sleep_ms(16 - (loop_start - loop_end))
         # EVERY 5 SECONDS
         if (loop_end - t0) > 5000:
                 # REINITTIALIZE ALL LIGHTS
@@ -170,7 +170,7 @@ def twinkle_stars(strips, num_stars=25):
                 stars = get_stars(num_stars)
                 
                 # RESTART THE SECOND TIMER
-                t0 = time.ticks_ms()
+                t0 = time.time() # for pico version .ticks_ms()
 
 
 # -------------------------
