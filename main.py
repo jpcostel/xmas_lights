@@ -18,7 +18,8 @@ NUM_STRANDS = wiring.NUM_STRANDS
 all_pixels = wiring.all_pixels
 show_all = wiring.show_all
 clear = wiring.clear
-
+from wiring import *
+import snow
 
 def main():
     # example test pattern
@@ -40,6 +41,7 @@ def main():
 #            # pulse.xmas_twinkle()
 #            effects.twinkle_stars(strips, 100)
     try:
+        snow.snowfall_effect(strips)
         effects.twinkle_stars(strips, 75)
 
     except KeyboardInterrupt:
