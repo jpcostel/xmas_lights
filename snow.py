@@ -7,7 +7,7 @@ SNOW_COLOR = (200, 200, 255)
 MAX_FLAKES = 60
 SPAWN_INTERVAL = 0.4   # seconds
 DT = 0.05              # frame time
-
+from grid import *
 
 class Snowflake:
     def __init__(self, col):
