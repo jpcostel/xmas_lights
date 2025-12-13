@@ -1,43 +1,83 @@
-import time
-import urandom
-from wiring import *
-from grid import *
+import time, random, math
 
-NUM_FLAKES = 28
-FALL_DELAY = 0.08
+ROWS = 8
+COLS = 25
 
-def new_flake():
-    return {
-        "row": 7,
-        "col": urandom.getrandbits(5) % COLS
-    }
+SNOW_COLOR = (200, 200, 255)
+MAX_FLAKES = 60
+SPAWN_INTERVAL = 0.4   # seconds
+DT = 0.05              # frame time
+
+
+class Snowflake:
+    def __init__(self, col):
+        self.col = col
+        self.y = ROWS + random.uniform(0.0, 4.0)
+        self.speed = random.uniform(0.3, 1.0)
+        self.base = random.uniform(0.3, 1.0)
+        self.phase = random.uniform(0, 2*math.pi)
+        self.rate = random.uniform(1.0, 3.0)
+
+    def update(self, dt):
+        self.y -= self.speed * dt
+        self.phase += self.rate * dt
+
+    def brightness(self):
+        return self.base * (0.6 + 0.4 * math.sin(self.phase))
+
 
 def snowfall_effect(strips):
-    flakes = [new_flake() for _ in range(NUM_FLAKES)]
+    flakes = []
+    last_spawn = time.time()
 
     while True:
-        # Clear background
-        for s in strips:
-            s.fill((0, 0, 0))
+        now = time.time()
+        dt = DT
 
-        # Draw flakes
+        # ---- Spawn new flakes (1–5 at a time) ----
+        if now - last_spawn > SPAWN_INTERVAL:
+            for _ in range(random.randint(1, 5)):
+                if len(flakes) < MAX_FLAKES:
+                    flakes.append(Snowflake(random.randrange(COLS)))
+            last_spawn = now
+
+        # ---- Clear LED grid ----
+        accum = [[0.0 for _ in range(COLS)] for _ in range(ROWS)]
+
+        # ---- Update flakes ----
+        alive = []
         for f in flakes:
-            strand, idx = grid_to_pixel(f["row"], f["col"])
-            strips[strand][idx] = (180, 180, 255)
+            f.update(dt)
+            if f.y < -1.0:
+                continue
+
+            b = f.brightness()
+            row = int(f.y)
+
+            # vertical interpolation
+            frac = f.y - row
+            if 0 <= row < ROWS:
+                accum[row][f.col] += b * (1.0 - frac)
+            if 0 <= row - 1 < ROWS:
+                accum[row - 1][f.col] += b * frac
+
+            alive.append(f)
+
+        flakes = alive
+
+        # ---- Render to LEDs ----
+        for r in range(ROWS):
+            for c in range(COLS):
+                v = min(1.0, accum[r][c])
+                color = (
+                    int(SNOW_COLOR[0] * v),
+                    int(SNOW_COLOR[1] * v),
+                    int(SNOW_COLOR[2] * v),
+                )
+                strand, idx = grid_to_pixel(r, c)
+                strips[strand][idx] = color
 
         for s in strips:
             s.write()
 
-        # Move flakes
-        for f in flakes:
-            # gentle wind
-            if urandom.getrandbits(3) == 0:
-                f["col"] += -1 if urandom.getrandbits(1) == 0 else 1
-                f["col"] = max(0, min(COLS - 1, f["col"]))
-
-            f["row"] -= 1
-
-            if f["row"] < 0:
-                f.update(new_flake())
-
-        time.sleep(FALL_DELAY)
+        time.sleep(DT)
