@@ -5,7 +5,7 @@ import neopixel
 # HARDWARE CONFIG
 # -------------------------
 
-PIXELS_PER_STRAND = 50
+PIXELS_PER_STRAND = 100
 NUM_STRANDS = 2
 
 PINS = [board.D18, board.D19]
