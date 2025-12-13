@@ -6,7 +6,7 @@ COLS = 25
 SNOW_COLOR = (200, 200, 255)
 MAX_FLAKES = 100
 SPAWN_INTERVAL = 0.1   # seconds
-DT = 0.033             # frame time
+DT = 0.016             # frame time
 
 def grid_to_pixel(row, col):
     """
@@ -101,5 +101,6 @@ def snowfall_effect(strips):
 
         for s in strips:
             s.write()
-
-        time.sleep(DT)
+        end = time.time()
+        loop_time = end - now
+        time.sleep(DT - loop_time)

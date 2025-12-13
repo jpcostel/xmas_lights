@@ -1,8 +1,6 @@
 import time
 import math
 import random
-import board
-import neopixel
 import wiring
 
 
@@ -23,6 +21,7 @@ NUM_STRANDS = wiring.NUM_STRANDS
 all_pixels = wiring.all_pixels
 show_all = wiring.show_all
 clear = wiring.clear
+get_color_mask = wiring.get_color_mask
 
 
 # -------------------------
@@ -38,13 +37,17 @@ def pulse_all(strips, cycle_time=4.0):
     cycle_time: seconds per full bright→dim→bright cycle
     """
     hue = 0.0  # start color (0 = red)
+    # for pico version cycle_ms = cycle_time * 1000
 
     while True:
-        start = time.time()
+        start = time.time() # for pico version .ticks_ms()
 
         # use a sinusoidal breathing curve
         while True:
-            t = (time.time() - start) / cycle_time
+            now = time.time() # for pico version .ticks_ms()
+            elapsed = now - start
+            
+            t = elapsed / cycle_time # for pico version cycle_ms
             if t >= 1.0:
                 break
 
@@ -60,7 +63,8 @@ def pulse_all(strips, cycle_time=4.0):
 
             all_pixels(strips, (int(r), int(g), int(b)))
             show_all(strips)
-            time.sleep(0.01)
+            time.sleep(0.010)
+
 
 
 # -------------------------
@@ -81,45 +85,93 @@ class Star:
         b = self.brightness(t)
         return (int(255*b), int(255*b), int(255*b))  # white twinkles
 
-
-def twinkle_stars(strips, num_stars=75):
-    """
-    Smooth, independent twinkling stars with no flicker or stutter.
-    Uses gamma-corrected sinusoidal brightness for natural sparkle.
-    """
-
-    # pick random LED coordinates
+def get_stars(num_stars):
     stars = []
     for _ in range(num_stars):
-        strand = random.randrange(NUM_STRANDS)
-        index = random.randrange(PIXELS_PER_STRAND)
+        strand = random.randrange(len(strips))
+        index = random.randrange(len(strips[0]))
         phase = random.random() * 2 * math.pi
-        speed = random.uniform(0.5, 2.0)  # slower = smoother and more elegant
+        speed = random.uniform(1.0, 3.0)
         stars.append((strand, index, phase, speed))
+    return stars
 
-    t0 = time.time()
 
-    # keep background off unless you want a color
-    all_pixels(strips, (182,86,42)) # Thanksgiving Orange
+def twinkle_stars(strips, num_stars=25):
+    # 1. GENERATE THE PERMANENT COLOR MAP
+    # We do this once. These colors will never change, only their brightness will.
+    color_mask = get_color_mask(strips)
+    for strip in range(len(strips)):
+        for pix in range(len(strips[strip])):
+            strips[strip][pix] = color_mask[strip][pix]
+
+    # 2. SETUP STARS
+    # We track stars by (strand, index, phase, speed)
+    stars = get_stars(num_stars)
+    
+    t0 = time.time() # for pico version .ticks_ms()
 
     while True:
-        t = time.time() - t0
+        
+        loop_start = time.time() # for pico version .ticks_ms()
+        t = loop_start - t0
 
-        # no more clearing — overwrite only the star LEDs
-        for strand, pixel, phase, speed in stars:
-
-            # smooth brightness 0–1
+        # --- OPTIMIZATION: DRAWING STRATEGY ---
+        # Instead of 'colorize' looping over every pixel every frame (slow!),
+        # we only loop over the stars.
+        
+        # 1. Clear previous stars (optional) or Draw Background
+        # If you want a dim background, set it here. If you want black background:
+        # all_pixels(strips, (0,0,0)) 
+        
+        # 2. Update and Draw Stars
+        
+        for strand, index, phase, speed in stars:
+            
+            # Calculate brightness (0.0 to 1.0)
             raw = 0.5 * (1 - math.cos(speed * t + phase))
+            # Add a brightness floor
+            min_brightness = 0.25
+            raw = min_brightness + (1 - min_brightness) * raw
+            
+            b = raw ** 2.2 # Gamma correction for nicer fade
 
-            # gamma correction
-            b = raw ** 2.2
-
-            val = int(255 * b)
-            # (219,186,51) thanksgiving yellow
-            strips[strand][pixel] = ((val/255)*219, (val/255)*186, (val/255)*51)
+            # Retrieve the correct color from our "Source of Truth"
+            # We don't read the strip, we read the mask.
+            base_color = color_mask[strand][index]
+            
+            # Apply brightness to that color
+#             final_color = (
+#                 int(base_color[0] * b),
+#                 int(base_color[1] * b),
+#                 int(base_color[2] * b)
+#             )
+            final_color = (
+            max(10, int(base_color[0] * b)) if base_color[0] > 0 and b > 0 else 0,
+            max(10, int(base_color[1] * b)) if base_color[1] > 0 and b > 0 else 0,
+            max(10, int(base_color[2] * b)) if base_color[2] > 0 and b > 0 else 0
+            )
+            # Write to strip
+            
+            strips[strand][index] = final_color
+            # print("Strand: {}\t\tIndex:{}\t\tFinal Color:{}".format(strand, index, final_color))
 
         show_all(strips)
-        time.sleep(0.01)  # smooth 100 FPS update
+        loop_end = time.time() # for pico version .ticks_ms()
+        # print("Loop Time: {}".format(time.ticks_diff(loop_end, loop_start)))
+        time.sleep(0.016 - (loop_start - loop_end))
+        # EVERY 5 SECONDS
+        if (loop_end - t0) > 5000:
+                # REINITTIALIZE ALL LIGHTS
+                for strip in range(len(strips)):
+                    for pix in range(len(strips[strip])):
+                        strips[strip][pix] = color_mask[strip][pix]
+
+                # RANDOMIZE NEW STARS
+                stars = get_stars(num_stars)
+                
+                # RESTART THE SECOND TIMER
+                t0 = time.time() # for pico version .ticks_ms()
+
 
 # -------------------------
 # Move lights along each string 
