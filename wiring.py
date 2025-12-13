@@ -1,4 +1,4 @@
-import board
+import machine
 import neopixel
 
 # -------------------------
@@ -8,11 +8,11 @@ import neopixel
 PIXELS_PER_STRAND = 100
 NUM_STRANDS = 2
 
-PINS = [board.D18, board.D19]
+PINS = [0,1]
 
 # Initialize strips
 strips = [
-    neopixel.NeoPixel(pin, PIXELS_PER_STRAND)
+    neopixel.NeoPixel(machine.Pin(pin), PIXELS_PER_STRAND)
     for pin in PINS
 ]
 
