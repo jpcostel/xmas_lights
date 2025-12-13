@@ -1,46 +1,39 @@
-import machine
+import board
 import neopixel
 
 # -------------------------
 # HARDWARE CONFIG
 # -------------------------
 
-PIXELS_PER_STRAND = 50
-NUM_STRANDS = 4
+PIXELS_PER_STRAND = 100
+NUM_STRANDS = 2
 
-PINS = [1,2,3,4]
+PINS = [board.D18, board.D19]
 
 # Initialize strips
 strips = [
-    neopixel.NeoPixel(
-        machine.Pin(pin),
-        PIXELS_PER_STRAND,
-        auto_write=False
-    )
+    neopixel.NeoPixel(pin, PIXELS_PER_STRAND)
     for pin in PINS
 ]
 
-def colorize(strips):
-    """Loop through and modulo to change the color of each pixel
-    take the existing RGB value as reference brightness"""
+def get_color_mask(strips):
+    """
+    Generates a list of colors (the rainbow pattern) for every pixel.
+    This acts as our "Source of Truth" so colors never get corrupted or faded.
+    """
+    # Your color palette
     ci = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
-    for strip in strips:
-        for i in range(PIXELS_PER_STRAND):
-            index = i % 0
-            color = ci[index]
-            brightness = strip[i]
-            pix=[]
-            for i in range(3):
-                pix[i] = (brightness[i]/255) * color[i]
-            strip[i] = pix
-                 
     
-    gap = gap + 1
-    for strip in strips:
-        strip.fill((0,0,0))
-        for i in range(strip.n):
-            index = i % 6
-            color = ci[index]
+    mask = []
+    for s_idx, strip in enumerate(strips):
+        strand_mask = []
+        # Use range(len(strip)) to be safe, or your constant PIXELS_PER_STRAND
+        for i in range(len(strip)):
+            index = i % len(ci)
+            strand_mask.append(ci[index])
+            # print("Index:{}\ni:{}\npixel:{}".format(index, i, ci[index]))
+        mask.append(strand_mask)
+    return mask
 
 
 def all_pixels(strips, color):
@@ -52,7 +45,7 @@ def all_pixels(strips, color):
 def show_all(strips):
     """Push updates to all strips."""
     for strip in strips:
-        strip.show()
+        strip.write()
 
 
 def clear(strips):
