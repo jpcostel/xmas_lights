@@ -1,6 +1,7 @@
 import time
 import urandom
 from wiring import *
+from grid import *
 
 NUM_FLAKES = 28
 FALL_DELAY = 0.08
