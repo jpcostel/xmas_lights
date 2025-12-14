@@ -1,100 +1,74 @@
-#!/home/jpcostel/Projects/xmas_lights/.venv/bin/python3
-
-from flask import Flask, render_template, redirect, url_for
-import subprocess
-import os
-import signal
+# webserver.py
+from flask import Flask, request, redirect, url_for
+import pico_ctrl
 import time
 
 app = Flask(__name__)
 
-MODE_FILE = "/tmp/current_led_mode"
-PID_FILE = "/tmp/main_py_pid"
+CURRENT_MODE = "snowfall_effect(strips)"
 
-
-def write_mode(mode):
-    """Write mode to MODE_FILE for watchdog + UI."""
-    with open(MODE_FILE, "w") as f:
-        f.write(mode)
-
-
-def get_current_mode():
-    if os.path.exists(MODE_FILE):
-        return open(MODE_FILE).read().strip()
-    return "unknown"
-
-
-def get_running_pid():
-    """Return PID of main.py if PID_FILE exists and pid alive."""
-    if not os.path.exists(PID_FILE):
-        return None
-
-    try:
-        pid = int(open(PID_FILE).read().strip())
-        os.kill(pid, 0)  # probe process
-        return pid
-    except:
-        return None
-
-
-def kill_main_py():
-    pid = get_running_pid()
-    if pid:
-        try:
-            print(f"Killing main.py (PID={pid})")
-            os.kill(pid, signal.SIGTERM)
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"Error killing main.py: {e}")
-
-
-def launch_main_py(mode):
-    """Launch main.py with the correct --mode argument and store PID."""
-
-    arg_map = {
-        "twinkle": "--twinkle",
-        "pulse": "--pulse",
-        "xmas": "--xmas",
-        "xmas_twinkle": "--xmas_twinkle",
-        "off": "--help",
-    }
-
-    flag = arg_map[mode]
-
-    print(f"Launching main.py {flag}")
-
-    # Launch detached background process
-    p = subprocess.Popen(
-        ["sudo", "/home/jpcostel/Projects/xmas_lights/.venv/bin/python3", "/home/jpcostel/Projects/xmas_lights/main.py", flag],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    with open(PID_FILE, "w") as f:
-        f.write(str(p.pid))
-
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
-    mode = get_current_mode()
-    return render_template("index.html", mode=mode)
+    return f"""
+    <html>
+    <body style="font-family:sans-serif">
+        <h2>LED Control</h2>
 
+        <form method="post" action="/snow">
+            <button style="font-size:20px">❄ Snow</button>
+        </form>
 
-@app.route("/set/<mode>")
-def set_mode(mode):
-    # 1. Save mode for watchdog
-    write_mode(mode)
+        <form method="post" action="/twinkle">
+            <button style="font-size:20px">✨ Twinkle</button>
+        </form>
 
-    # 2. Kill running main.py
-    kill_main_py()
+        <form method="post" action="/scroll">
+            <input name="text" placeholder="Scroll text">
+            <button style="font-size:20px">📝 Scroll</button>
+        </form>
 
-    # 3. Launch new main.py with correct argument
-    launch_main_py(mode)
+        <p>Current mode: <b>{CURRENT_MODE}</b></p>
+    </body>
+    </html>
+    """
 
-    # 4. Load updated UI
+@app.route("/snow", methods=["POST"])
+def snow():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("snowfall_effect(strips)")
+    CURRENT_MODE = "snowfall_effect(strips)"
     return redirect(url_for("index"))
 
+@app.route("/twinkle", methods=["POST"])
+def twinkle():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("twinkle_effect(strips)")
+    CURRENT_MODE = "twinkle_effect(strips)"
+    return redirect(url_for("index"))
+
+@app.route("/scroll", methods=["POST"])
+def scroll():
+    global CURRENT_MODE
+
+    text = request.form.get("text", "").replace('"', '')
+
+    # Stop current animation
+    pico_ctrl.interrupt()
+
+    # Run scroll text (blocking on Pico)
+    pico_ctrl.run(
+        f'scroll_text(strips, "{text}", (255,255,255), (10,10,30), 0.03)'
+    )
+
+    # Give the scroll time to start
+    time.sleep(0.2)
+
+    # Resume previous mode
+    pico_ctrl.run(CURRENT_MODE)
+
+    return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    # Bind to all interfaces so your phone can access it
     app.run(host="0.0.0.0", port=5000)
