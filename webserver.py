@@ -36,7 +36,7 @@ def index():
 def snow():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("snowfall_effect(strips)")
+    pico_ctrl.run("snow.snowfall_effect(strips)")
     CURRENT_MODE = "snowfall_effect(strips)"
     return redirect(url_for("index"))
 
@@ -44,7 +44,7 @@ def snow():
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("twinkle_effect(strips)")
+    pico_ctrl.run("effects.twinkle_effect(strips)")
     CURRENT_MODE = "twinkle_effect(strips)"
     return redirect(url_for("index"))
 
@@ -59,7 +59,7 @@ def scroll():
 
     # Run scroll text (blocking on Pico)
     pico_ctrl.run(
-        f'scroll_text(strips, "{text}", (255,255,255), (10,10,30), 0.03)'
+        f'scroll.scroll_text(strips, "{text}", (255,255,255), (10,10,30), 0.03)'
     )
 
     # Give the scroll time to start

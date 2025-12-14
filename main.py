@@ -1,6 +1,7 @@
 import time
 import wiring 
 import effects
+import scroll
 
 
 # -------------------------
