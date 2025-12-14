@@ -20,5 +20,5 @@ def interrupt():
 
 def run(cmd: str):
     send_raw((cmd + "\n").encode("utf-8"))
-    send_raw(("\n").encode("utf-8"))
+    send_raw((b"\x0A"))
     

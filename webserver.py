@@ -44,8 +44,8 @@ def snow():
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("effects.twinkle_effect(strips)")
-    CURRENT_MODE = "effects.twinkle_effect(strips)"
+    pico_ctrl.run("effects.twinkle_stars(strips)")
+    CURRENT_MODE = "effects.twinkle_stars(strips)"
     return redirect(url_for("index"))
 
 @app.route("/scroll", methods=["POST"])
