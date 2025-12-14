@@ -19,6 +19,6 @@ def interrupt():
     time.sleep(0.2)
 
 def run(cmd: str):
-    send_raw((cmd + "\n").encode("utf-8"))
-    send_raw((b"\x0A"))
+    send_raw((cmd + "\r\n").encode("utf-8"))
+    #send_raw((b"\x0A"))
     

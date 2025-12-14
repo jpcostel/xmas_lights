@@ -3,6 +3,7 @@ import time
 from wiring import *
 import snow
 import effects
+import scroll
 
 # ssid = "Lumos"
 # password = "Alohomora3!"
