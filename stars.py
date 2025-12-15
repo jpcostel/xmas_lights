@@ -171,7 +171,7 @@ def starfield_with_ripples(strips):
                     if add <= 0:
                         continue
 
-                    strand, index = xy_to_strip(x, y)
+                    strand, index = xy_to_strip(y, x)
                     r, g, b = strips[strand][index]
 
                     scale = 1.0 + add
