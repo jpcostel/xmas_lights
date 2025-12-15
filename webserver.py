@@ -44,15 +44,15 @@ def snow():
     CURRENT_MODE = "snow.snowfall_effect(strips)"
     return redirect(url_for("index"))
 
-@app.route("/twinkle", methods=["POST"])
-def twinkle():
+@app.route("/ripple", methods=["POST"])
+def ripple():
     global CURRENT_MODE
     pico_ctrl.interrupt()
     pico_ctrl.run("stars.starfield(strips)")
     CURRENT_MODE = "stars.starfield(strips)"
     return redirect(url_for("index"))
 
-@app.route("/ripple", methods=["POST"])
+@app.route("/twinkle", methods=["POST"])
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
