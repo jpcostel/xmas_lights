@@ -22,6 +22,10 @@ def index():
             <button style="font-size:20px">✨ Twinkle</button>
         </form>
 
+        <form method="post" action="/ripple">
+            <button style="font-size:20px">✨ Twinkle with Ripples</button>
+        </form>
+        
         <form method="post" action="/scroll">
             <input name="text" placeholder="Scroll text">
             <button style="font-size:20px">📝 Scroll</button>
@@ -44,8 +48,16 @@ def snow():
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("effects.twinkle_stars(strips)")
-    CURRENT_MODE = "effects.twinkle_stars(strips)"
+    pico_ctrl.run("stars.starfield_with_ripples(strips)")
+    CURRENT_MODE = "stars.starfield_with_ripples(strips)"
+    return redirect(url_for("index"))
+
+@app.route("/ripple", methods=["POST"])
+def twinkle():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield_with_ripples(strips)")
+    CURRENT_MODE = "stars.starfield_with_ripples(strips)"
     return redirect(url_for("index"))
 
 @app.route("/scroll", methods=["POST"])

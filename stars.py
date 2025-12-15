@@ -97,7 +97,7 @@ class Ripple:
 # MAIN EFFECT LOOP
 # ============================================================
 
-def starfield_with_ripples(strips):
+def starfield(strips, ripples_on=True):
 
     color_mask = get_color_mask(strips)
 
@@ -120,10 +120,11 @@ def starfield_with_ripples(strips):
         # ----------------------------------------------------
         # SPAWN RIPPLE (RARE)
         # ----------------------------------------------------
-        if random.random() < RIPPLE_SPAWN_PROB:
-            cx = random.randrange(GRID_WIDTH)
-            cy = random.randrange(GRID_HEIGHT)
-            ripples.append(Ripple(cx, cy, frame_start))
+        if ripples_on:
+            if random.random() < RIPPLE_SPAWN_PROB:
+                cx = random.randrange(GRID_WIDTH)
+                cy = random.randrange(GRID_HEIGHT)
+                ripples.append(Ripple(cx, cy, frame_start))
 
         # ----------------------------------------------------
         # BACKGROUND DRAW
@@ -163,27 +164,28 @@ def starfield_with_ripples(strips):
         # RIPPLES
         # ----------------------------------------------------
         new_ripples = []
-        for ripple in ripples:
-            if not ripple.alive(frame_start):
-                continue
+        if ripples_on:
+            for ripple in ripples:
+                if not ripple.alive(frame_start):
+                    continue
 
-            for x in range(GRID_WIDTH):
-                for y in range(GRID_HEIGHT):
-                    add = ripple.brightness_at(x, y, frame_start)
-                    if add <= 0:
-                        continue
+                for x in range(GRID_WIDTH):
+                    for y in range(GRID_HEIGHT):
+                        add = ripple.brightness_at(x, y, frame_start)
+                        if add <= 0:
+                            continue
 
-                    strand, index = xy_to_strip(y, x)
-                    r, g, b = strips[strand][index]
+                        strand, index = xy_to_strip(y, x)
+                        r, g, b = strips[strand][index]
 
-                    scale = 1.0 + add
-                    strips[strand][index] = (
-                        min(255, int(r * scale)),
-                        min(255, int(g * scale)),
-                        min(255, int(b * scale)),
-                    )
+                        scale = 1.0 + add
+                        strips[strand][index] = (
+                            min(255, int(r * scale)),
+                            min(255, int(g * scale)),
+                            min(255, int(b * scale)),
+                        )
 
-            new_ripples.append(ripple)
+                new_ripples.append(ripple)
         ripples = new_ripples
 
         # ----------------------------------------------------
