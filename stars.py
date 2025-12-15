@@ -70,9 +70,9 @@ class Ripple:
         self.cy = cy
         self.start_ms = start_ms
 
-        self.speed = random.uniform(6.0, 10.0)   # pixels/sec
+        self.speed = random.uniform(16.0, 32.0)   # pixels/sec
         self.width = random.uniform(1.5, 3.0)
-        self.strength = random.uniform(0.2, 0.5)
+        self.strength = random.uniform(0.5, 0.8)
         self.max_radius = 30
 
     def alive(self, now_ms):

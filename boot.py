@@ -4,6 +4,7 @@ from wiring import *
 import snow
 import effects
 import scroll
+import stars
 
 # ssid = "Lumos"
 # password = "Alohomora3!"
