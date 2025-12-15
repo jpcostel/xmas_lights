@@ -11,10 +11,10 @@ from grid import grid_to_pixel as xy_to_strip
 GRID_WIDTH = 25
 GRID_HEIGHT = 8
 
-BACKGROUND_BRIGHTNESS = 0.45
+BACKGROUND_BRIGHTNESS = 0.33
 
-STAR_SPAWN_PROB = 0.6      # per frame (~1 every 1–2 frames)
-RIPPLE_SPAWN_PROB = 0.002  # rare event
+STAR_SPAWN_PROB = 0.8      # per frame (~1 every 1–2 frames)
+RIPPLE_SPAWN_PROB = 0.05  # rare event
 
 FRAME_MS = 16              # ~60 FPS
 
@@ -41,7 +41,7 @@ class Star:
         self.start_ms = start_ms
 
         # Randomized pulse parameters
-        self.duration_ms = random.randint(600, 1800)
+        self.duration_ms = random.randint(600, 3600)
         self.min_b = random.uniform(0.15, 0.35)
         self.max_b = random.uniform(0.7, 1.0)
 
