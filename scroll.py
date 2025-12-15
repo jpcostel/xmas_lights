@@ -63,7 +63,7 @@ def scroll_text(strips, message, text_color, bg_color, speed=0.05):
                 bits = columns[x]
                 for y in range(7):
                     if bits & (1 << ((ROWS - 2) - y)):
-                        row = y 
+                        row = y - 1
                         strand, idx = grid_to_pixel(row, screen_col)
                         strips[strand][idx] = text_color
 
