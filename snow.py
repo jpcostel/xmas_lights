@@ -61,7 +61,7 @@ def snowfall_effect(strips, sleet=False):
         if now - last_spawn > SPAWN_INTERVAL:
             for _ in range(random.randint(1, 5)):
                 if len(flakes) < MAX_FLAKES:
-                    for b in range(random.randrange((INTENSITY/100)*25)):
+                    for b in range(random.randrange(int((INTENSITY/100)*25))):
                         col = random.randrange(COLS)
                         flakes.append(Snowflake(random.randrange(COLS)))
             last_spawn = now
