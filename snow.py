@@ -5,7 +5,7 @@ COLS = 25
 
 SNOW_COLOR = (200, 200, 255)
 MAX_FLAKES = 100
-SPAWN_INTERVAL = 0.05   # seconds
+SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
 
 def grid_to_pixel(row, col):
@@ -48,7 +48,7 @@ class Snowflake:
         return self.base * (0.6 + 0.4 * math.sin(self.phase))
 
 
-def snowfall_effect(strips):
+def snowfall_effect(strips, sleet=False):
     flakes = []
     last_spawn = time.time()
     last_col = 0
@@ -81,8 +81,9 @@ def snowfall_effect(strips):
             frac = f.y - row
             if 0 <= row < ROWS:
                 accum[row][f.col] += b * frac
-            # if 0 <= row - 1 < ROWS:
-                # accum[row - 1][f.col] += b * (1.0 - frac)
+            if sleet:
+                if 0 <= row - 1 < ROWS:
+                    accum[row - 1][f.col] += b * (1.0 - frac)
 
             alive.append(f)
 
