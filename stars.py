@@ -95,7 +95,9 @@ class Ripple:
 # MAIN EFFECT LOOP
 # ============================================================
 
-def starfield_with_ripples(strips, color_mask):
+def starfield_with_ripples(strips):
+
+    color_mask = get_color_mask(strips)
 
     stars = []
     ripples = []
