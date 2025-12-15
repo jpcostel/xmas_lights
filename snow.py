@@ -4,7 +4,7 @@ ROWS = 8
 COLS = 25
 
 SNOW_COLOR = (200, 200, 255)
-MAX_FLAKES = 100
+MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
 
@@ -61,6 +61,7 @@ def snowfall_effect(strips, sleet=False):
             for _ in range(random.randint(1, 5)):
                 if len(flakes) < MAX_FLAKES:
                     col = random.randrange(COLS)
+                    flakes.append(Snowflake(random.randrange(COLS)))
                     flakes.append(Snowflake(random.randrange(COLS)))
             last_spawn = now
 
