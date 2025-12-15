@@ -35,7 +35,7 @@ class Snowflake:
     def __init__(self, col):
         self.col = col
         self.y = ROWS + random.uniform(0.0, 4.0)
-        self.speed = random.uniform(0.5, 5.0)
+        self.speed = random.uniform(2.5, 10.0)
         self.base = random.uniform(0.3, 1.0)
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
