@@ -61,9 +61,9 @@ def scroll_text(strips, message, text_color, bg_color, speed=0.05):
             screen_col = COLS - 1 - offset + x
             if 0 <= screen_col < COLS:
                 bits = columns[x]
-                for y in range(7, -1, -1):
-                    if bits & (1 << y):
-                        row = ((ROWS - 1) - y) + 1  # center text vertically
+                for y in range(7):
+                    if bits & (1 << ((ROWS - 2) - y)):
+                        row = y + 1  # center text vertically
                         strand, idx = grid_to_pixel(row, screen_col)
                         strips[strand][idx] = text_color
 
