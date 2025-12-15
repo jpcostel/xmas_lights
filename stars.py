@@ -64,6 +64,8 @@ RIPPLE_SPAWN_PROB = 0.002      # rare
 
 t0 = time.time()
 
+color_mask = get_color_mask(strips)
+
 while True:
     now = time.time()
     t = now - t0
@@ -83,7 +85,7 @@ while True:
     # --- BACKGROUND ---
     for s in range(len(strips)):
         for i in range(len(strips[s])):
-            base = get_color_mask[s][i]
+            base = color_mask[s][i]
             strips[s][i] = (
                 int(base[0] * BACKGROUND_BRIGHTNESS),
                 int(base[1] * BACKGROUND_BRIGHTNESS),
@@ -94,7 +96,7 @@ while True:
     stars = [s for s in stars if s.alive(t)]
     for s in stars:
         b = s.brightness(t) ** 2.2
-        base = get_color_mask[s.strand][s.index]
+        base = color_mask[s.strand][s.index]
         strips[s.strand][s.index] = (
             int(base[0] * b),
             int(base[1] * b),
