@@ -51,7 +51,7 @@ class Snowflake:
 def snowfall_effect(strips):
     flakes = []
     last_spawn = time.time()
-
+    last_col = 0
     while True:
         now = time.time()
         dt = DT
@@ -60,6 +60,7 @@ def snowfall_effect(strips):
         if now - last_spawn > SPAWN_INTERVAL:
             for _ in range(random.randint(1, 5)):
                 if len(flakes) < MAX_FLAKES:
+                    col = random.randrange(COLS)
                     flakes.append(Snowflake(random.randrange(COLS)))
             last_spawn = now
 
@@ -81,7 +82,7 @@ def snowfall_effect(strips):
             if 0 <= row < ROWS:
                 accum[row][f.col] += b * frac
             if 0 <= row - 1 < ROWS:
-                accum[row - 1][f.col] += b * (1.0 - frac)
+                # accum[row - 1][f.col] += b * (1.0 - frac)
 
             alive.append(f)
 
