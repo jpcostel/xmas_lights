@@ -48,16 +48,16 @@ def snow():
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("stars.starfield_with_ripples(strips)")
-    CURRENT_MODE = "stars.starfield_with_ripples(strips)"
+    pico_ctrl.run("stars.starfield(strips)")
+    CURRENT_MODE = "stars.starfield(strips)"
     return redirect(url_for("index"))
 
 @app.route("/ripple", methods=["POST"])
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
-    pico_ctrl.run("stars.starfield_with_ripples(strips)")
-    CURRENT_MODE = "stars.starfield_with_ripples(strips)"
+    pico_ctrl.run("stars.starfield(strips, ripples_on=False)")
+    CURRENT_MODE = "stars.starfield(strips, ripples_on=False)"
     return redirect(url_for("index"))
 
 @app.route("/scroll", methods=["POST"])
