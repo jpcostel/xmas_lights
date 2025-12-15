@@ -7,6 +7,7 @@ SNOW_COLOR = (200, 200, 255)
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
+INTENSITY = 50      # max percentage of total columns
 
 def grid_to_pixel(row, col):
     """
@@ -60,9 +61,9 @@ def snowfall_effect(strips, sleet=False):
         if now - last_spawn > SPAWN_INTERVAL:
             for _ in range(random.randint(1, 5)):
                 if len(flakes) < MAX_FLAKES:
-                    col = random.randrange(COLS)
-                    flakes.append(Snowflake(random.randrange(COLS)))
-                    flakes.append(Snowflake(random.randrange(COLS)))
+                    for b in range(random.randrange((INTENSITY/100)*25)):
+                        col = random.randrange(COLS)
+                        flakes.append(Snowflake(random.randrange(COLS)))
             last_spawn = now
 
         # ---- Clear LED grid ----
