@@ -3,7 +3,7 @@ import time, random, math
 ROWS = 8
 COLS = 25
 
-CUTOFF = 0.45        # interpolation cutoff
+CUTOFF = 0.5        # interpolation cutoff
 
 SNOW_COLOR = (255, 255, 200)
 MAX_FLAKES = 150
