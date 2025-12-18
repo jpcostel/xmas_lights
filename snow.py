@@ -5,7 +5,7 @@ COLS = 25
 
 CUTOFF = 0.5        # interpolation cutoff
 
-SNOW_COLOR = (255, 255, 200)
+SNOW_COLOR = (255, 255, 100)
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
