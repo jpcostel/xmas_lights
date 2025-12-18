@@ -84,7 +84,7 @@ def snowfall_effect(strips):
             # vertical interpolation
             frac = f.y - row
             if 0 <= row < ROWS:
-                if frac > CUTOOFF:
+                if frac > CUTOFF:
                     accum[row][f.col] += b * frac
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
