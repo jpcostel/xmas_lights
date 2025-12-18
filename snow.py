@@ -3,11 +3,13 @@ import time, random, math
 ROWS = 8
 COLS = 25
 
-SNOW_COLOR = (200, 200, 255)
+CUTOFF = 0.5        # interpolation cutoff
+
+SNOW_COLOR = (255, 255, 200)
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
-INTENSITY = 50      # max percentage of total columns
+INTENSITY = 25      # max percentage of total columns
 
 def grid_to_pixel(row, col):
     """
@@ -49,7 +51,7 @@ class Snowflake:
         return self.base * (0.6 + 0.4 * math.sin(self.phase))
 
 
-def snowfall_effect(strips, sleet=False):
+def snowfall_effect(strips):
     flakes = []
     last_spawn = time.time()
     last_col = 0
@@ -57,7 +59,7 @@ def snowfall_effect(strips, sleet=False):
         now = time.time()
         dt = DT
 
-        # ---- Spawn new flakes (1–5 at a time) ----
+        # ---- Spawn new flakes ----
         if now - last_spawn > SPAWN_INTERVAL:
             for _ in range(random.randint(1, 5)):
                 if len(flakes) < MAX_FLAKES:
@@ -82,9 +84,10 @@ def snowfall_effect(strips, sleet=False):
             # vertical interpolation
             frac = f.y - row
             if 0 <= row < ROWS:
-                accum[row][f.col] += b * frac
-            if sleet:
-                if 0 <= row - 1 < ROWS:
+                if frac > CUTOOFF:
+                    accum[row][f.col] += b * frac
+            if 0 <= row - 1 < ROWS:
+                if (1.0 - frac) > CUTOFF:
                     accum[row - 1][f.col] += b * (1.0 - frac)
 
             alive.append(f)
