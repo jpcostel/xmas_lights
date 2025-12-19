@@ -10,7 +10,7 @@ SNOW_COLORS = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
-INTENSITY = 40      # max percentage of total columns
+INTENSITY = 25      # max percentage of total columns
 
 def grid_to_pixel(row, col):
     """
@@ -39,7 +39,7 @@ class Snowflake:
     def __init__(self, col, colorful):
         self.col = col
         self.y = ROWS + random.uniform(0.0, 4.0)
-        self.speed = random.uniform(4.0, 13.0)
+        self.speed = random.uniform(4.0, 11.0)
         self.base = random.uniform(0.3, 1.0)
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
