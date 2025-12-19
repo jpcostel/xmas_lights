@@ -95,9 +95,9 @@ def snowfall_effect(strips, colorful=False):
                     accum[row][f.col][2] += f.color[2] * frac
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
-                    accum[row - 1][f.col] += f.color[0] * (1.0 - frac)
-                    accum[row - 1][f.col] += f.color[1] * (1.0 - frac)
-                    accum[row - 1][f.col] += f.color[2] * (1.0 - frac)
+                    accum[row - 1][f.col][0] += f.color[0] * (1.0 - frac)
+                    accum[row - 1][f.col][1] += f.color[1] * (1.0 - frac)
+                    accum[row - 1][f.col][2] += f.color[2] * (1.0 - frac)
 
             alive.append(f)
 
