@@ -99,8 +99,8 @@ def snowfall_effect(strips, colorful=False):
                     accum[row - 1][f.col][1] += f.color[1] * (1.0 - frac)
                     accum[row - 1][f.col][2] += f.color[2] * (1.0 - frac)
             if colorful == False:
-                g1 = min(225, accum[row][f.col])
-                g2 = min(225, accum[row - 1][f.col])
+                g1 = min(225, accum[row][f.col][1])
+                g2 = min(225, accum[row - 1][f.col][1])
                 accum[row][f.col] = g1
                 accum[row - 1][f.col] = g2
             alive.append(f)
