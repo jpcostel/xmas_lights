@@ -44,7 +44,7 @@ class Snowflake:
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
         if colorful:
-            self.color = SNOW_COLORS[random.randint(0,len(SNOW_COLORS))]
+            self.color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS) - 1))]
         else:
             self.color = SNOW_COLOR
 
