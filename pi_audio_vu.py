@@ -9,7 +9,6 @@ BAUD = 115200
 ser = serial.Serial(SERIAL_PORT, BAUD, timeout=0)
 
 # ---- Audio ----
-MIC_DEVICE = 1
 SAMPLE_RATE = 48000
 BLOCK_SIZE = 1024
 CHANNELS = 1
@@ -20,6 +19,13 @@ COLS = 25
 ROWS = 8
 FREQ_MIN = 50
 FREQ_MAX = 16000
+
+MIC_DEVICE = None
+for i, d in enumerate(sd.query_devices()):
+    if "MV7" in d['name']:
+        MIC_DEVICE = i
+if MIC_DEVICE is None:
+    raise RuntimeError("MV7 not found")
 
 # ---- FFT bin setup (log-spaced) ----
 fft_bins = np.fft.rfftfreq(BLOCK_SIZE, 1 / SAMPLE_RATE)
