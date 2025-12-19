@@ -43,7 +43,6 @@ class Snowflake:
         self.base = random.uniform(0.3, 1.0)
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
-        self.rand_color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS)-1))]
 
     def update(self, dt):
         self.y -= self.speed * dt
@@ -71,7 +70,7 @@ def snowfall_effect(strips, colorful=False):
             last_spawn = now
 
         # ---- Clear LED grid ----
-        accum = [[(0.0, 0.0, 0.0) for _ in range(COLS)] for _ in range(ROWS)]
+        accum = [[0.0 for _ in range(COLS)] for _ in range(ROWS)]
 
         # ---- Update flakes ----
         alive = []
@@ -107,10 +106,11 @@ def snowfall_effect(strips, colorful=False):
                         int(SNOW_COLOR[2] * v),
                     )
                 else:
+                    rand_color = SNOW_COLORS[random.randint(0,len(SNOW_COLORS))]
                     color = (
-                        int(SNOW_COLOR[0] * v),
-                        int(SNOW_COLOR[1] * v),
-                        int(SNOW_COLOR[2] * v),
+                        int(rand_color[0] * v),
+                        int(rand_color[1] * v),
+                        int(rand_color[2] * v),
                     )
                 strand, idx = grid_to_pixel(r, c)
                 strips[strand][idx] = color
