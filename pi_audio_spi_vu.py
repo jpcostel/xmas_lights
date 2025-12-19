@@ -33,6 +33,7 @@ def send_frame(heights):
     spi.xfer2(frame)
 
 def audio_cb(indata, frames, time_info, status):
+    print("callback")
     samples = indata[:, 0] * window
     fft = np.abs(np.fft.rfft(samples))
 
