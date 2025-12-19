@@ -57,6 +57,7 @@ def send_frame(heights):
 
 # ---- Audio callback ----
 def audio_callback(indata, frames, time_info, status):
+    print("callback")
     samples = indata[:, 0]
     fft = np.abs(np.fft.rfft(samples * window))
 
