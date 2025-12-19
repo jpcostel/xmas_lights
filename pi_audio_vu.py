@@ -71,6 +71,7 @@ def audio_callback(indata, frames, time_info, status):
     
 
 # ---- Start stream ----
+print("Running audio visualizer...")
 with sd.InputStream(
     device=MIC_DEVICE,
     channels=CHANNELS,
@@ -79,6 +80,4 @@ with sd.InputStream(
     dtype=DTYPE,
     callback=audio_callback
 ):
-    print("Running audio visualizer...")
-    while True:
-        time.sleep(1)
+    time.sleep(1)
