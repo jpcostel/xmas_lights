@@ -101,8 +101,8 @@ def snowfall_effect(strips, colorful=False):
             if colorful == False:
                 g1 = min(225, accum[row][f.col][1])
                 g2 = min(225, accum[row - 1][f.col][1])
-                accum[row][f.col] = g1
-                accum[row - 1][f.col] = g2
+                accum[row][f.col][1] = g1
+                accum[row - 1][f.col][1] = g2
             alive.append(f)
 
         flakes = alive
