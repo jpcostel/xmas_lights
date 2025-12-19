@@ -66,8 +66,9 @@ def audio_callback(indata, frames, time_info, status):
         level = max(0, min(ROWS, int(level)))
         heights.append(level)
 
-    send_frame(heights)
     print(heights)
+    send_frame(heights)
+    
 
 # ---- Start stream ----
 with sd.InputStream(
