@@ -7,10 +7,10 @@ CUTOFF = 0.5        # interpolation cutoff
 
 SNOW_COLOR = (255,225,255)
 SNOW_COLORS = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
-MAX_FLAKES = 150
+MAX_FLAKES = 200
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
-INTENSITY = 25      # max percentage of total columns
+INTENSITY = 40      # max percentage of total columns
 
 def grid_to_pixel(row, col):
     """
