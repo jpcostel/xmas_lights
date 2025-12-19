@@ -70,7 +70,7 @@ def snowfall_effect(strips, colorful=False):
                 if len(flakes) < MAX_FLAKES:
                     for b in range(random.randrange(int((INTENSITY/100)*25))):
                         col = random.randrange(COLS)
-                        flakes.append(Snowflake(random.randrange(COLS)))
+                        flakes.append(Snowflake(random.randrange(COLS), colorful))
             last_spawn = now
 
         # ---- Clear LED grid ----
