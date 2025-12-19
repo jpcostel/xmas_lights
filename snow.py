@@ -36,13 +36,17 @@ def grid_to_pixel(row, col):
     return strand, index
 
 class Snowflake:
-    def __init__(self, col):
+    def __init__(self, col, colorful):
         self.col = col
         self.y = ROWS + random.uniform(0.0, 4.0)
-        self.speed = random.uniform(2.5, 10.0)
+        self.speed = random.uniform(4.0, 16.0)
         self.base = random.uniform(0.3, 1.0)
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
+        if colorful:
+            self.color = SNOW_COLORS[random.randint(0,len(SNOW_COLORS))]
+        else:
+            self.color = SNOW_COLOR
 
     def update(self, dt):
         self.y -= self.speed * dt
@@ -70,7 +74,7 @@ def snowfall_effect(strips, colorful=False):
             last_spawn = now
 
         # ---- Clear LED grid ----
-        accum = [[0.0 for _ in range(COLS)] for _ in range(ROWS)]
+        accum = [[[0.0, 0.0, 0.0] for _ in range(COLS)] for _ in range(ROWS)]
 
         # ---- Update flakes ----
         alive = []
@@ -86,10 +90,14 @@ def snowfall_effect(strips, colorful=False):
             frac = f.y - row
             if 0 <= row < ROWS:
                 if frac > CUTOFF:
-                    accum[row][f.col] += b * frac
+                    accum[row][f.col][0] += f.color[0] * frac
+                    accum[row][f.col][1] += f.color[1] * frac
+                    accum[row][f.col][2] += f.color[2] * frac
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
-                    accum[row - 1][f.col] += b * (1.0 - frac)
+                    accum[row - 1][f.col] += f.color[0] * (1.0 - frac)
+                    accum[row - 1][f.col] += f.color[1] * (1.0 - frac)
+                    accum[row - 1][f.col] += f.color[2] * (1.0 - frac)
 
             alive.append(f)
 
@@ -98,22 +106,8 @@ def snowfall_effect(strips, colorful=False):
         # ---- Render to LEDs ----
         for r in range(ROWS):
             for c in range(COLS):
-                v = min(1.0, accum[r][c])
-                if colorful == False:
-                    color = (
-                        int(SNOW_COLOR[0] * v),
-                        int(SNOW_COLOR[1] * v),
-                        int(SNOW_COLOR[2] * v),
-                    )
-                else:
-                    rand_color = SNOW_COLORS[random.randint(0,len(SNOW_COLORS))]
-                    color = (
-                        int(rand_color[0] * v),
-                        int(rand_color[1] * v),
-                        int(rand_color[2] * v),
-                    )
                 strand, idx = grid_to_pixel(r, c)
-                strips[strand][idx] = color
+                strips[strand][idx] = accum[r][c]
 
         for s in strips:
             s.write()
