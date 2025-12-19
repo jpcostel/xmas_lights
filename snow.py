@@ -71,7 +71,7 @@ def snowfall_effect(strips, colorful=False):
             last_spawn = now
 
         # ---- Clear LED grid ----
-        accum = [[0.0 for _ in range(COLS)] for _ in range(ROWS)]
+        accum = [[(0.0, 0.0, 0.0) for _ in range(COLS)] for _ in range(ROWS)]
 
         # ---- Update flakes ----
         alive = []
@@ -108,9 +108,9 @@ def snowfall_effect(strips, colorful=False):
                     )
                 else:
                     color = (
-                        int(f.rand_color[0] * v),
-                        int(f.rand_color[1] * v),
-                        int(f.rand_color[2] * v),
+                        int(SNOW_COLOR[0] * v),
+                        int(SNOW_COLOR[1] * v),
+                        int(SNOW_COLOR[2] * v),
                     )
                 strand, idx = grid_to_pixel(r, c)
                 strips[strand][idx] = color
