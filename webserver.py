@@ -18,6 +18,10 @@ def index():
             <button style="font-size:20px">❄ Snow</button>
         </form>
 
+        <form method="post" action="/snow_colors">
+            <button style="font-size:20px">❄ Snow Xmas-Colors</button>
+        </form>
+
         <form method="post" action="/twinkle">
             <button style="font-size:20px">✨ Twinkle</button>
         </form>
@@ -42,6 +46,14 @@ def snow():
     pico_ctrl.interrupt()
     pico_ctrl.run("snow.snowfall_effect(strips)")
     CURRENT_MODE = "snow.snowfall_effect(strips)"
+    return redirect(url_for("index"))
+
+@app.route("/snow_colors", methods=["POST"])
+def snow():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("snow.snowfall_effect(strips, True)")
+    CURRENT_MODE = "snow.snowfall_effect(strips, True)"
     return redirect(url_for("index"))
 
 @app.route("/ripple", methods=["POST"])
