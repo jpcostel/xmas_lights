@@ -106,7 +106,7 @@ def snowfall_effect(strips, colorful=False):
                         int(SNOW_COLOR[2] * v),
                     )
                 else:
-                    rand_color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS)))]
+                    rand_color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS)-1))]
                     color = (
                         int(rand_color[0] * v),
                         int(rand_color[1] * v),
