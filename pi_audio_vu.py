@@ -9,9 +9,11 @@ BAUD = 115200
 ser = serial.Serial(SERIAL_PORT, BAUD, timeout=0)
 
 # ---- Audio ----
-SAMPLE_RATE = 44100
+MIC_DEVICE = 1
+SAMPLE_RATE = 48000
 BLOCK_SIZE = 1024
 CHANNELS = 1
+DTYPE = 'float32'
 
 # ---- Visualization ----
 COLS = 25
@@ -69,9 +71,11 @@ def audio_callback(indata, frames, time_info, status):
 
 # ---- Start stream ----
 with sd.InputStream(
+    device=MIC_DEVICE,
     channels=CHANNELS,
     samplerate=SAMPLE_RATE,
     blocksize=BLOCK_SIZE,
+    dtype=DTYPE,
     callback=audio_callback
 ):
     print("Running audio visualizer...")
