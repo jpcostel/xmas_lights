@@ -5,7 +5,8 @@ COLS = 25
 
 CUTOFF = 0.5        # interpolation cutoff
 
-SNOW_COLOR = (255, 0, 0)
+SNOW_COLOR = (255,225,255)
+SNOW_COLORS = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0,255))
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
@@ -51,7 +52,7 @@ class Snowflake:
         return self.base * (0.6 + 0.4 * math.sin(self.phase))
 
 
-def snowfall_effect(strips):
+def snowfall_effect(strips, colorful=False):
     flakes = []
     last_spawn = time.time()
     last_col = 0
@@ -98,11 +99,19 @@ def snowfall_effect(strips):
         for r in range(ROWS):
             for c in range(COLS):
                 v = min(1.0, accum[r][c])
-                color = (
-                    int(SNOW_COLOR[0] * v),
-                    int(SNOW_COLOR[1] * v),
-                    int(SNOW_COLOR[2] * v),
-                )
+                if colorful == False:
+                    color = (
+                        int(SNOW_COLOR[0] * v),
+                        int(SNOW_COLOR[1] * v),
+                        int(SNOW_COLOR[2] * v),
+                    )
+                else:
+                    rand_color = SNOW_COLORS[random.randint(0,len(SNOW_COLORS))]
+                    color = (
+                        int(rand_color[0] * v),
+                        int(rand_color[1] * v),
+                        int(rand_color[2] * v),
+                    )
                 strand, idx = grid_to_pixel(r, c)
                 strips[strand][idx] = color
 
