@@ -107,7 +107,7 @@ def snowfall_effect(strips, colorful=False):
         for r in range(ROWS):
             for c in range(COLS):
                 strand, idx = grid_to_pixel(r, c)
-                strips[strand][idx] = accum[r][c]
+                strips[strand][idx] = (int(accum[r][c][0]), int(accum[r][c][1]), int(accum[r][c][2]))
 
         for s in strips:
             s.write()
