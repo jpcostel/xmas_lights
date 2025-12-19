@@ -33,7 +33,6 @@ def send_frame(heights):
     spi.xfer2(frame)
 
 def audio_cb(indata, frames, time_info, status):
-    print("callback")
     samples = indata[:, 0] * window
     fft = np.abs(np.fft.rfft(samples))
 
@@ -43,6 +42,7 @@ def audio_cb(indata, frames, time_info, status):
         level = int(min(ROWS, np.log10(power + 1e-6) * 3))
         heights.append(max(0, level))
 
+    print(heights)
     send_frame(heights)
 
 with sd.InputStream(
