@@ -49,7 +49,7 @@ def snow():
     return redirect(url_for("index"))
 
 @app.route("/snow_colors", methods=["POST"])
-def snow():
+def snow_colors():
     global CURRENT_MODE
     pico_ctrl.interrupt()
     pico_ctrl.run("snow.snowfall_effect(strips, True)")
