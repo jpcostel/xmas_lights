@@ -43,6 +43,7 @@ class Snowflake:
         self.base = random.uniform(0.3, 1.0)
         self.phase = random.uniform(0, 2*math.pi)
         self.rate = random.uniform(1.0, 3.0)
+        self.rand_color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS)-1))]
 
     def update(self, dt):
         self.y -= self.speed * dt
@@ -106,11 +107,10 @@ def snowfall_effect(strips, colorful=False):
                         int(SNOW_COLOR[2] * v),
                     )
                 else:
-                    rand_color = SNOW_COLORS[random.randint(0,(len(SNOW_COLORS)-1))]
                     color = (
-                        int(rand_color[0] * v),
-                        int(rand_color[1] * v),
-                        int(rand_color[2] * v),
+                        int(f.rand_color[0] * v),
+                        int(f.rand_color[1] * v),
+                        int(f.rand_color[2] * v),
                     )
                 strand, idx = grid_to_pixel(r, c)
                 strips[strand][idx] = color
