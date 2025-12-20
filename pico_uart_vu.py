@@ -47,6 +47,7 @@ def read_uart():
             continue
 
         heights[:] = frame[2:27]
+        print("Heights:{}".format(heights))
 
 def render():
     np.fill((0, 0, 0))
