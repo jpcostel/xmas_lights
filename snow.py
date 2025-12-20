@@ -90,14 +90,14 @@ def snowfall_effect(strips, colorful=False):
             frac = f.y - row
             if 0 <= row < ROWS:
                 if frac > CUTOFF:
-                    accum[row][f.col][0] = f.color[0] * frac
-                    accum[row][f.col][1] = f.color[1] * frac
-                    accum[row][f.col][2] = f.color[2] * frac
+                    accum[row][f.col][0] = f.color[0] * frac * b
+                    accum[row][f.col][1] = f.color[1] * frac * b
+                    accum[row][f.col][2] = f.color[2] * frac * b
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
-                    accum[row - 1][f.col][0] = f.color[0] * (1.0 - frac)
-                    accum[row - 1][f.col][1] = f.color[1] * (1.0 - frac)
-                    accum[row - 1][f.col][2] = f.color[2] * (1.0 - frac)
+                    accum[row - 1][f.col][0] = f.color[0] * (1.0 - frac) * b
+                    accum[row - 1][f.col][1] = f.color[1] * (1.0 - frac) * b
+                    accum[row - 1][f.col][2] = f.color[2] * (1.0 - frac) * b
             alive.append(f)
 
         flakes = alive
