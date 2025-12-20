@@ -45,7 +45,7 @@ def audio_cb(indata, frames, time_info, status):
         power = np.mean(fft[idx]) if len(idx) else 0
         level = int(np.clip(np.log10(power + 1e-6) * 3.0, 0, ROWS))
         heights.append(level)
-
+    print(heights)
     send_frame(heights)
 
 def play():
