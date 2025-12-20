@@ -47,7 +47,7 @@ def read_uart():
             continue
 
         heights[:] = frame[2:27]
-        print(heights)
+    print(heights)
 
 def render():
     np.fill((0, 0, 0))
@@ -61,7 +61,6 @@ def render():
                 60
             )
     np.write()
-    print(np)
 
 # ---- Main loop ----
 FRAME_MS = 16
