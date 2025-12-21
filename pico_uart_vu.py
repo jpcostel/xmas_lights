@@ -2,19 +2,19 @@ from machine import UART, Pin
 import neopixel
 import time
 
-ROWS = 8
-COLS = 25
-PIXELS = ROWS * COLS
+from wiring import *
 
 # ---- NeoPixels ----
-np = neopixel.NeoPixel(Pin(18), PIXELS)
+# np = neopixel.NeoPixel(Pin(18), PIXELS)
 
-def grid_to_pixel(row, col):
-    # serpentine wiring
-    if row % 2 == 0:
-        return row * COLS + (COLS - 1 - col)
-    else:
-        return row * COLS + col
+# def grid_to_pixel(row, col):
+#     # serpentine wiring
+#     if row % 2 == 0:
+#         return row * COLS + (COLS - 1 - col)
+#     else:
+#         return row * COLS + col
+
+from grid import grid_to_pixel
 
 # ---- UART1 ----
 uart = UART(
@@ -33,6 +33,7 @@ def read_uart():
 
     while uart.any():
         data = uart.read()
+        print(data)
         if data:
             buf.extend(data)
 
@@ -49,20 +50,21 @@ def read_uart():
             continue
 
         heights[:] = frame[2:27]
-    print(heights)
 
 def render():
-    np.fill((0, 0, 0))
+    for strip in strips:
+        strip.fill((0,0,0))
     for col in range(COLS):
         h = min(ROWS, heights[col])
         for row in range(h):
-            idx = grid_to_pixel(row, col)
-            np[idx] = (
+            strand, idx = grid_to_pixel(row, col)
+            strips[strand][idx] = (
                 20 + row * 30,
                 255 - row * 20,
                 60
             )
-    np.write()
+    for strip in strips:
+        strip.write()
 
 # ---- Main loop ----
 FRAME_MS = 16
