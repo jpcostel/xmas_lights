@@ -32,7 +32,9 @@ def read_uart():
     global buf, heights
 
     while uart.any():
-        buf.extend(uart.read())
+        data = uart.read()
+        if data:
+            buf.extend(data)
 
     while len(buf) >= FRAME_LEN:
         if buf[0] != 0xAA:
