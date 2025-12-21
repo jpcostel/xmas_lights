@@ -4,6 +4,9 @@ import time
 
 from wiring import *
 
+ROWS = 8
+COLS = 25
+
 # ---- NeoPixels ----
 # np = neopixel.NeoPixel(Pin(18), PIXELS)
 
