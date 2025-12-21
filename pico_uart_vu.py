@@ -30,6 +30,8 @@ uart = UART(
 FRAME_LEN = 29
 buf = bytearray()
 heights = [0] * COLS
+for col in heights:
+    col = random.randrange(0,ROWS-1)
 
 def read_uart():
     global buf, heights
@@ -73,8 +75,6 @@ def render():
 FRAME_MS = 16
 
 while True:
-    print("read uart")
     read_uart()
-    print("render")
     render()
     time.sleep_ms(FRAME_MS)
