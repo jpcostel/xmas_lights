@@ -83,7 +83,7 @@ def scroll():
 
     # Run scroll text (blocking on Pico)
     pico_ctrl.run(
-        f'scroll.scroll_text(strips, "{text.upper()}", (255,32,32), (10, 30, 10), 0.03)'
+        f'scroll.scroll_text(strips, "{text.upper()}", (16, 255, 16), (0,0,0), 0.03)'
     )
 
     # Give the scroll time to start

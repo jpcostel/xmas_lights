@@ -10,7 +10,7 @@ SNOW_COLORS = ((255,255,0), (0,0,255), (255,0,0), (0,255,0), (0,255,255), (255,0
 MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
-INTENSITY = 25      # max percentage of total columns
+INTENSITY = 50      # max percentage of total columns
 
 def grid_to_pixel(row, col):
     """
