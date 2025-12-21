@@ -50,6 +50,8 @@ def scroll_text(strips, message, text_color, bg_color, speed=0.05):
     text_width = len(columns)
 
     for offset in range(text_width + COLS):
+        if offset == (COLS - text_width):
+            time.sleep(1)
         # Background fill
         for row in range(ROWS):
             for col in range(COLS):
