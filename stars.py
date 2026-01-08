@@ -14,10 +14,10 @@ GRID_HEIGHT = 8
 BACKGROUND_BRIGHTNESS = 0.25
 
 STAR_SPAWN_PROB = 1.0      # per frame 
-RIPPLE_SPAWN_PROB = 0.005  # rare event
+RIPPLE_SPAWN_PROB = 0.015  # rare event
 
-# FRAME_MS = 16              # ~60 FPS
-FRAME_MS = 16              # ~30 FPS
+FRAME_MS = 16              # ~60 FPS
+# FRAME_MS = 33              # ~30 FPS
 
 
 # ============================================================
@@ -113,6 +113,10 @@ def starfield(strips, ripples_on=True):
         # SPAWN NEW STAR
         # ----------------------------------------------------
         if random.random() < STAR_SPAWN_PROB:
+            strand = random.randrange(len(strips))
+            index = random.randrange(len(strips[0]))
+            stars.append(Star(strand, index, frame_start))
+        if random.random() < 0.5 * STAR_SPAWN_PROB:
             strand = random.randrange(len(strips))
             index = random.randrange(len(strips[0]))
             stars.append(Star(strand, index, frame_start))
