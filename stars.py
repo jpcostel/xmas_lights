@@ -72,7 +72,7 @@ class Ripple:
         self.cy = cy
         self.start_ms = start_ms
 
-        self.speed = random.uniform(18.0, 25.0)   # pixels/sec
+        self.speed = random.uniform(9.0, 12.0)   # pixels/sec
         self.width = random.uniform(1.0, 2.0)
         self.strength = random.uniform(0.6, 0.9)
         self.max_radius = 30
