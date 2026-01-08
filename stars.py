@@ -11,13 +11,13 @@ from grid import grid_to_pixel as xy_to_strip
 GRID_WIDTH = 25
 GRID_HEIGHT = 8
 
-BACKGROUND_BRIGHTNESS = 0.33
+BACKGROUND_BRIGHTNESS = 0.25
 
-STAR_SPAWN_PROB = 0.8      # per frame (~1 every 1–2 frames)
+STAR_SPAWN_PROB = 1.0      # per frame 
 RIPPLE_SPAWN_PROB = 0.005  # rare event
 
 # FRAME_MS = 16              # ~60 FPS
-FRAME_MS = 33              # ~30 FPS
+FRAME_MS = 16              # ~30 FPS
 
 
 # ============================================================
