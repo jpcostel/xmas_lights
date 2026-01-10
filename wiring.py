@@ -5,8 +5,8 @@ import neopixel
 # HARDWARE CONFIG
 # -------------------------
 
-PIXELS_PER_STRAND = 100
-NUM_STRANDS = 2
+PIXELS_PER_STRAND = 300
+NUM_STRANDS = 1
 
 PINS = [0,1]
 
