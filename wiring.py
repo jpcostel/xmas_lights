@@ -8,7 +8,7 @@ import neopixel
 PIXELS_PER_STRAND = 300
 NUM_STRANDS = 1
 
-PINS = [0,1]
+PINS = [0]
 
 # Initialize strips
 strips = [
