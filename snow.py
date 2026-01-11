@@ -1,6 +1,6 @@
 import time, random, math
 
-ROWS = 8
+ROWS = 10
 COLS = 25
 
 CUTOFF = 0.5        # interpolation cutoff
@@ -19,12 +19,8 @@ def grid_to_pixel(row, col):
     returns: (strand, index)
     """
 
-    if row < 4:
-        strand = 0
-        local_row = row
-    else:
-        strand = 1
-        local_row = row - 4
+    strand = 0
+    local_row = row
 
     if local_row % 2 == 0:
         # right → left

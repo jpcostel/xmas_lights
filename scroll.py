@@ -3,7 +3,7 @@ import wiring
 from grid import grid_to_pixel
 
 
-ROWS = 8
+ROWS = 10
 COLS = 25
 FONT = {
     "A": [0x1E,0x05,0x05,0x1E,0x00],
