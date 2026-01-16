@@ -10,6 +10,14 @@ NUM_STRANDS = 2
 
 PINS = [0,1]
 
+GOLD_PALETTE = [
+    (255,  32,   0),   
+    (255,  48,   0),   
+    (255,  64,   0),   
+    (255, 128,   0),   
+    (255, 196,  32),   
+]
+
 EMBER_PALETTE = [
     (120,  60,   0),   
     (180, 120,   0),   
@@ -52,7 +60,7 @@ def get_color_mask(strips, pallet=0):
     """
     # Your color palette
     
-    color_indices = [XMAS_PALLET, EMBER_PALETTE, WATER_PALETTE]
+    color_indices = [XMAS_PALLET, EMBER_PALETTE, WATER_PALETTE, GOLD_PALETTE]
     ci = color_indices[pallet]
 
     mask = []
