@@ -29,7 +29,31 @@ def index():
         <form method="post" action="/ripple">
             <button style="font-size:20px">✨ Twinkle with Ripples</button>
         </form>
-        
+
+        <form method="post" action="/gold_twinkle">
+            <button style="font-size:20px">✨ Gold Stars</button>
+        </form>
+
+        <form method="post" action="/gold_ripple">
+            <button style="font-size:20px">✨ Dynamic Gold Stars</button>
+        </form>
+
+        <form method="post" action="/cool_twinkle">
+            <button style="font-size:20px">✨ Cool Stars</button>
+        </form>
+
+        <form method="post" action="/cool_ripple">
+            <button style="font-size:20px">✨ Wavy Cool Stars</button>
+        </form>                
+
+        <form method="post" action="/warm_twinkle">
+            <button style="font-size:20px">✨ Hot Stars</button>
+        </form>
+
+        <form method="post" action="/warm_ripple">
+            <button style="font-size:20px">✨ Explosive Hot Stars</button>
+        </form>        
+
         <form method="post" action="/scroll">
             <input name="text" placeholder="Scroll text">
             <button style="font-size:20px">📝 Scroll</button>
@@ -56,7 +80,7 @@ def snow_colors():
     CURRENT_MODE = "snow.snowfall_effect(strips, True)"
     return redirect(url_for("index"))
 
-@app.route("/ripple", methods=["POST"])
+@app.route("/xmas_ripple", methods=["POST"])
 def ripple():
     global CURRENT_MODE
     pico_ctrl.interrupt()
@@ -64,12 +88,60 @@ def ripple():
     CURRENT_MODE = "stars.starfield(strips)"
     return redirect(url_for("index"))
 
-@app.route("/twinkle", methods=["POST"])
+@app.route("/xmas_twinkle", methods=["POST"])
 def twinkle():
     global CURRENT_MODE
     pico_ctrl.interrupt()
     pico_ctrl.run("stars.starfield(strips, ripples_on=False)")
     CURRENT_MODE = "stars.starfield(strips, ripples_on=False)"
+    return redirect(url_for("index"))
+
+@app.route("/cool_ripple", methods=["POST"])
+def cool_ripple():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, 1, 2)")
+    CURRENT_MODE = "stars.starfield(strips, 1, 2)"
+    return redirect(url_for("index"))
+
+@app.route("/cool_twinkle", methods=["POST"])
+def cool_twinkle():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, ripples_on=False, 2)")
+    CURRENT_MODE = "stars.starfield(strips, ripples_on=False, 2)"
+    return redirect(url_for("index"))
+
+@app.route("/warm_ripple", methods=["POST"])
+def warm_ripple():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, 1, 3)")
+    CURRENT_MODE = "stars.starfield(strips, 1, 3)"
+    return redirect(url_for("index"))
+
+@app.route("/warm_twinkle", methods=["POST"])
+def warm_twinkle():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, ripples_on=False, 3)")
+    CURRENT_MODE = "stars.starfield(strips, ripples_on=False, 3)"
+    return redirect(url_for("index"))
+
+@app.route("/gold_ripple", methods=["POST"])
+def gold_ripple():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, 1, 1)")
+    CURRENT_MODE = "stars.starfield(strips, 1, 1)"
+    return redirect(url_for("index"))
+
+@app.route("/gold_twinkle", methods=["POST"])
+def gold_twinkle():
+    global CURRENT_MODE
+    pico_ctrl.interrupt()
+    pico_ctrl.run("stars.starfield(strips, ripples_on=False, 1)")
+    CURRENT_MODE = "stars.starfield(strips, ripples_on=False, 1)"
     return redirect(url_for("index"))
 
 @app.route("/scroll", methods=["POST"])
