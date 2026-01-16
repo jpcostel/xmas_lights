@@ -11,11 +11,11 @@ NUM_STRANDS = 2
 PINS = [0,1]
 
 EMBER_PALETTE = [
-    (255,  90,  20),   # Ember Orange – primary glow
-    (220,  40,   0),   # Deep Coal Red – hottest core
-    (255, 140,  40),   # Smoldering Amber – outer glow
-    (160,  20,   0),   # Dark Char – cooling embers
-    (255, 200, 120),   # Ash Glow – soft residual heat
+    (120,  60,   0),   
+    (180, 120,   0),   
+    (220, 180,   0),   
+    (255, 220, 120),   
+    (160, 200,  20),   
 ]
 
 WATER_PALETTE = [
