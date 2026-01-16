@@ -22,12 +22,12 @@ def index():
             <button style="font-size:20px">❄ Snow Xmas-Colors</button>
         </form>
 
-        <form method="post" action="/twinkle">
-            <button style="font-size:20px">✨ Twinkle</button>
+        <form method="post" action="/xmas_twinkle">
+            <button style="font-size:20px">✨ Xmas Twinkle Lights</button>
         </form>
 
-        <form method="post" action="/ripple">
-            <button style="font-size:20px">✨ Twinkle with Ripples</button>
+        <form method="post" action="/xmas_ripple">
+            <button style="font-size:20px">✨ Xmas With Ripples</button>
         </form>
 
         <form method="post" action="/gold_twinkle">
@@ -35,7 +35,7 @@ def index():
         </form>
 
         <form method="post" action="/gold_ripple">
-            <button style="font-size:20px">✨ Dynamic Gold Stars</button>
+            <button style="font-size:20px">✨ Gold Supernova</button>
         </form>
 
         <form method="post" action="/cool_twinkle">
