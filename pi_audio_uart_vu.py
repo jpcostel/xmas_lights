@@ -5,7 +5,7 @@ import time
 
 # ---- UART ----
 ser = serial.Serial(
-    "/dev/serial0",
+    "/dev/ttyS0",
     baudrate=1_000_000,
     timeout=0
 )

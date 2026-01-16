@@ -76,7 +76,7 @@ class Star:
         self.strand = strand
         self.index = index
         self.offset = random.random() * 2 * math.pi  # random phase start
-        self.speed = random.uniform(1.0, 3.5)        # each star pulses differently
+        self.speed = random.uniform(1.0, 2.0)        # each star pulses differently
 
     def brightness(self, t):
         return 0.5 * (1 - math.cos(self.speed * t + self.offset))

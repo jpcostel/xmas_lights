@@ -1,5 +1,4 @@
 from machine import UART, Pin
-import neopixel
 import time
 import random
 
