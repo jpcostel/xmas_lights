@@ -97,9 +97,9 @@ class Ripple:
 # MAIN EFFECT LOOP
 # ============================================================
 
-def starfield(strips, ripples_on=True):
+def starfield(strips, ripples_on=True, pallet=0):
 
-    color_mask = get_color_mask(strips)
+    color_mask = get_color_mask(strips, pallet=pallet)
 
     stars = []
     ripples = []
