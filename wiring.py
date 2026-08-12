@@ -75,6 +75,14 @@ def get_color_mask(strips, pallet=0):
     return mask
 
 
+BRIGHTNESS = 1.0
+
+def set_brightness(value):
+    """Set the global brightness scale (0.0-1.0) applied by show_all()."""
+    global BRIGHTNESS
+    BRIGHTNESS = max(0.0, min(1.0, value))
+
+
 def all_pixels(strips, color):
     """Set every pixel on every strand."""
     for strip in strips:
@@ -82,9 +90,26 @@ def all_pixels(strips, color):
 
 
 def show_all(strips):
-    """Push updates to all strips."""
+    """Push updates to all strips, scaled by the global brightness.
+
+    Scaling is applied only to what's written to the hardware, then the
+    strip's buffer is restored to its unscaled values. Effects (e.g. the
+    ripple code in stars.py) read back strip[i] to compute the next frame,
+    so leaving BRIGHTNESS baked into the buffer would compound the dimming
+    every frame instead of applying it once per frame.
+    """
+    if BRIGHTNESS >= 1.0:
+        for strip in strips:
+            strip.write()
+        return
+
     for strip in strips:
+        original = [strip[i] for i in range(len(strip))]
+        for i, (r, g, b) in enumerate(original):
+            strip[i] = (int(r * BRIGHTNESS), int(g * BRIGHTNESS), int(b * BRIGHTNESS))
         strip.write()
+        for i, color in enumerate(original):
+            strip[i] = color
 
 
 def clear(strips):
