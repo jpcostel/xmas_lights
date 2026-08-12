@@ -1,0 +1,32 @@
+# /etc/systemd/system/homekit_bridge.service
+[Unit]
+Description=HomeKit Bridge for Mantle Lights
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Run as pi user
+User=jpcostel
+Group=jpcostel
+
+# Project directory
+WorkingDirectory=/home/jpcostel/Projects/xmas_lights
+
+# IMPORTANT: use venv python if you have one
+ExecStart=/home/jpcostel/Projects/xmas_lights/.venv/bin/python3 /home/jpcostel/Projects/xmas_lights/homekit_bridge.py
+
+# Restart on crash
+Restart=always
+RestartSec=3
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Log output
+StandardOutput=append:/var/log/homekit_bridge.log
+StandardError=append:/var/log/homekit_bridge.log
+
+[Install]
+WantedBy=multi-user.target
