@@ -89,6 +89,26 @@ SCENES = {
         "web_label": "👀 Classic Watching Jack-o'-Lantern",
         "cmd": "import halloween; halloween.watching_jack(strips, 2)",
     },
+    "witch_moon": {
+        "name": "Witch Moon",
+        "web_label": "🌕 Witch Moon",
+        "cmd": "import witch; witch.moon_witch(strips)",
+    },
+    "bat_swarm": {
+        "name": "Bat Swarm",
+        "web_label": "🦇 Bat Swarm",
+        "cmd": "import bats; bats.bat_swarm(strips)",
+    },
+    "slime": {
+        "name": "Dripping Slime",
+        "web_label": "🟢 Dripping Slime",
+        "cmd": "import drips; drips.drip(strips, 0)",
+    },
+    "blood": {
+        "name": "Dripping Blood",
+        "web_label": "🩸 Dripping Blood",
+        "cmd": "import drips; drips.drip(strips, 1)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
