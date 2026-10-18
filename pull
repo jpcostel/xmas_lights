@@ -2,5 +2,5 @@
 
 git pull
 sudo systemctl restart led_web.service 
-rshell -p /dev/ttyACM0 --buffer-size 512 "rsync ./ /pyboard/"
+.venv/bin/rshell -p /dev/ttyACM0 --buffer-size 512 "rsync ./ /pyboard/"
 sudo minicom -D /dev/ttyACM0 115200

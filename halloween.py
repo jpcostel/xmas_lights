@@ -8,12 +8,7 @@ from grid import grid_to_pixel, ROWS, COLS
 # CONFIGURATION
 # ============================================================
 
-SKIN_COLOR = (255, 70, 0)      # base pumpkin orange
-SKIN_HUE_JITTER = 30           # +/- green spread: redder <-> yellower pixels
-SKIN_SPECKLE = 0.10            # random per-pixel brightness dip
-RIB_SPACING = 6                # columns between vertical pumpkin ribs
-RIB_DEPTH = 0.15               # how much darker the rib grooves are
-EDGE_SHADE = 0.35              # darkening toward the sides (round pumpkin)
+SKIN_COLOR = (255, 70, 0)      # pumpkin orange
 
 PUPIL_COLOR = (255, 200, 60)   # glowing pupils inside the dark eye sockets
 GAZE_X = 2.0                   # max pupil travel from socket center (pixels)
@@ -36,38 +31,38 @@ FRAME_MS = 33                  # ~30 FPS
 #   E  eye socket (void the pupils move around in; animated face only)
 
 FACES = [
-    # 0: classic - triangle eyes and nose, toothy grin
+    # 0: classic - triangle eyes, toothy grin
     [
         ".........................",
         "......#...........#......",
         ".....###.........###.....",
-        "....#####...#...#####....",
-        "...........###...........",
+        "....#####.......#####....",
+        ".........................",
         "...##...............##...",
-        "....###.#########.###....",
-        ".....######...######.....",
+        "....#####.#####.#####....",
+        ".........................",
     ],
-    # 1: scary - angry slanted eyes, nostrils, jagged teeth
+    # 1: scary - angry slanted eyes, jagged teeth
     [
         ".........................",
         "...##...............##...",
         "...#####.........#####...",
         "....######.....######....",
-        "...........#.#...........",
+        ".........................",
         "..#####################..",
         "...#.#.#.#.#.#.#.#.#.#...",
         ".........................",
     ],
-    # 2: happy - round eyes, button nose, wide smile
+    # 2: happy - round eyes, wide smile
     [
         ".........................",
         ".....###.........###.....",
         "....#####.......#####....",
         ".....###.........###.....",
-        "............#............",
-        "..##.................##..",
-        "...####...........####...",
-        ".......###########.......",
+        ".........................",
+        "...##...............##...",
+        ".....###############.....",
+        ".........................",
     ],
 ]
 
@@ -76,53 +71,19 @@ WATCHING_FACE = [
     "....EEEE.........EEEE....",
     "...EEEEEE.......EEEEEE...",
     "....EEEE.........EEEE....",
-    "...........###...........",
+    ".........................",
     "...##...............##...",
-    "....###.#########.###....",
-    ".....######...######.....",
+    "....#####.#####.#####....",
+    ".........................",
 ]
 
 
-# ============================================================
-# PUMPKIN SKIN
-# ============================================================
-
-def _pumpkin_skin():
-    """Orange per grid cell with ribs, rounded shading, and speckle.
-
-    Uses its own LCG rather than random.seed() so the texture is the same
-    every time without making the other effects' randomness repeatable.
-    """
-    seed = 0x5EED
-    mid = (COLS - 1) / 2
-    skin = []
-    for row in range(ROWS):
-        line = []
-        for col in range(COLS):
-            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-            speckle = (seed & 0xFFFF) / 0xFFFF
-            hue = ((seed >> 16) & 0x7FFF) / 0x7FFF
-
-            rib = 1.0 - RIB_DEPTH * 0.5 * (1 - math.cos(2 * math.pi * (col - mid) / RIB_SPACING))
-            edge = 1.0 - EDGE_SHADE * ((col - mid) / mid) ** 2
-            shade = rib * edge * (1.0 - SKIN_SPECKLE * speckle)
-
-            g = max(0, SKIN_COLOR[1] + int((hue - 0.5) * 2 * SKIN_HUE_JITTER))
-            line.append((
-                int(SKIN_COLOR[0] * shade),
-                int(g * shade),
-                int(SKIN_COLOR[2] * shade),
-            ))
-        skin.append(line)
-    return skin
-
-
-def _draw_face(strips, face, skin):
+def _draw_face(strips, face):
     for r, line in enumerate(face):
         row = ROWS - 1 - r
         for col, ch in enumerate(line):
             strand, index = grid_to_pixel(row, col)
-            strips[strand][index] = skin[row][col] if ch == "." else (0, 0, 0)
+            strips[strand][index] = SKIN_COLOR if ch == "." else (0, 0, 0)
 
 
 # ============================================================
@@ -131,7 +92,7 @@ def _draw_face(strips, face, skin):
 
 def jack_o_lantern(strips, face=0):
     """Draw one of FACES and return; the strips hold the image."""
-    _draw_face(strips, FACES[face], _pumpkin_skin())
+    _draw_face(strips, FACES[face])
     show_all(strips)
 
 
@@ -178,8 +139,7 @@ def _pick_gaze():
 
 
 def watching_jack(strips):
-    skin = _pumpkin_skin()
-    _draw_face(strips, WATCHING_FACE, skin)
+    _draw_face(strips, WATCHING_FACE)
     sockets = _eye_sockets(WATCHING_FACE)
 
     now = utime.ticks_ms()
@@ -237,11 +197,10 @@ def watching_jack(strips):
                 w = max(0.0, 1 - abs(col - px)) * max(0.0, 1 - abs(row - py))
                 b = min(1.0, w / peak)
                 covered = min(1.0, max(0.0, lid * height - (top - row)))
-                s = skin[row][col]
                 strips[strand][index] = (
-                    int(PUPIL_COLOR[0] * b * (1 - covered) + s[0] * covered),
-                    int(PUPIL_COLOR[1] * b * (1 - covered) + s[1] * covered),
-                    int(PUPIL_COLOR[2] * b * (1 - covered) + s[2] * covered),
+                    int(PUPIL_COLOR[0] * b * (1 - covered) + SKIN_COLOR[0] * covered),
+                    int(PUPIL_COLOR[1] * b * (1 - covered) + SKIN_COLOR[1] * covered),
+                    int(PUPIL_COLOR[2] * b * (1 - covered) + SKIN_COLOR[2] * covered),
                 )
 
         show_all(strips)
