@@ -208,3 +208,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# HomeKit bridge runtime state (pairings, private key, config version).
+# Written by homekit_bridge.py on the Pi; must never be overwritten by a pull.
+homekit_state.json
