@@ -77,7 +77,12 @@ SCENES = {
     "jack_watching": {
         "name": "Watching Jack O Lantern",
         "web_label": "👀 Watching Jack-o'-Lantern",
-        "cmd": "import halloween; halloween.watching_jack(strips)",
+        "cmd": "import halloween; halloween.watching_jack(strips, 0)",
+    },
+    "jack_watching_scary": {
+        "name": "Scary Watching Jack O Lantern",
+        "web_label": "👀 Scary Watching Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.watching_jack(strips, 1)",
     },
 }
 
