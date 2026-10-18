@@ -5,6 +5,7 @@ import snow
 import effects
 import scroll
 import stars
+import halloween
 
 # ssid = "Lumos"
 # password = "Alohomora3!"

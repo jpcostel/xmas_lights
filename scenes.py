@@ -55,6 +55,30 @@ SCENES = {
         "web_label": "✨ Explosive Hot Stars",
         "cmd": "stars.starfield(strips, 1, 3)",
     },
+    # New scenes go at the end: HomeKit accessory IDs follow this order, so
+    # inserting above would renumber the existing scene switches.
+    # The inline import lets these run even if the Pico hasn't been reset
+    # since halloween.py was copied over (boot.py only runs at reset).
+    "jack_classic": {
+        "name": "Jack O Lantern",
+        "web_label": "🎃 Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.jack_o_lantern(strips, 0)",
+    },
+    "jack_scary": {
+        "name": "Scary Jack O Lantern",
+        "web_label": "🎃 Scary Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.jack_o_lantern(strips, 1)",
+    },
+    "jack_happy": {
+        "name": "Happy Jack O Lantern",
+        "web_label": "🎃 Happy Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.jack_o_lantern(strips, 2)",
+    },
+    "jack_watching": {
+        "name": "Watching Jack O Lantern",
+        "web_label": "👀 Watching Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.watching_jack(strips)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
