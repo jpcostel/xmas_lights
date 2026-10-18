@@ -84,6 +84,11 @@ SCENES = {
         "web_label": "👀 Scary Watching Jack-o'-Lantern",
         "cmd": "import halloween; halloween.watching_jack(strips, 1)",
     },
+    "jack_watching_classic": {
+        "name": "Classic Watching Jack O Lantern",
+        "web_label": "👀 Classic Watching Jack-o'-Lantern",
+        "cmd": "import halloween; halloween.watching_jack(strips, 2)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
