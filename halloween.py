@@ -1,8 +1,8 @@
 import math
 import random
 import utime
-from wiring import show_all
-from grid import grid_to_pixel, ROWS, COLS
+from wiring import show_all, pixel_map
+from grid import ROWS, COLS
 
 # ============================================================
 # CONFIGURATION
@@ -18,7 +18,7 @@ SACCADE_MS_PER_PX = 50         # ...plus this much per pixel travelled
 BLINK_EVERY_MS = (2500, 7000)
 BLINK_MS = 220
 
-FRAME_MS = 33                  # ~30 FPS
+FRAME_MS = 16                  # ~60 FPS
 
 # ============================================================
 # FACE DESIGNS
@@ -101,12 +101,15 @@ WATCHING_FACES = [
 ]
 
 
-def _draw_face(strips, face):
+def _draw_face(pixels, face):
     for r, line in enumerate(face):
         row = ROWS - 1 - r
         for col, ch in enumerate(line):
-            strand, index = grid_to_pixel(row, col)
-            strips[strand][index] = SKIN_COLOR if ch == "." else (0, 0, 0)
+            buf, ro, go, bo = pixels[row][col]
+            c = SKIN_COLOR if ch == "." else (0, 0, 0)
+            buf[ro] = c[0]
+            buf[go] = c[1]
+            buf[bo] = c[2]
 
 
 # ============================================================
@@ -115,7 +118,7 @@ def _draw_face(strips, face):
 
 def jack_o_lantern(strips, face=0):
     """Draw one of FACES and return; the strips hold the image."""
-    _draw_face(strips, FACES[face])
+    _draw_face(pixel_map(strips), FACES[face])
     show_all(strips)
 
 
@@ -123,11 +126,11 @@ def jack_o_lantern(strips, face=0):
 # WATCHING JACK-O'-LANTERN (pupils look around the room)
 # ============================================================
 
-def _eye_sockets(face):
+def _eye_sockets(pixels, face):
     """Group the 'E' cells into left/right eyes.
 
     Returns [(center_x, center_y, top_row, height, cells, cell_set)], where
-    cells is a list of (col, row, strand, index) and cell_set holds the
+    cells is a list of (col, row, buf, r, g, b) and cell_set holds the
     (col, row) pairs for quick "is this inside the socket" checks.
     """
     eyes = {}
@@ -135,8 +138,7 @@ def _eye_sockets(face):
         row = ROWS - 1 - r
         for col, ch in enumerate(line):
             if ch == "E":
-                strand, index = grid_to_pixel(row, col)
-                eyes.setdefault(col >= COLS // 2, []).append((col, row, strand, index))
+                eyes.setdefault(col >= COLS // 2, []).append((col, row) + pixels[row][col])
 
     # Centers are snapped to the nearest half pixel: mirrored, lopsided
     # sockets (the scary eyes) have centroids like 5.3 and 18.7, and the
@@ -179,8 +181,9 @@ def _pick_gaze(sockets):
 
 
 def watching_jack(strips, face=0):
-    _draw_face(strips, WATCHING_FACES[face])
-    sockets = _eye_sockets(WATCHING_FACES[face])
+    pixels = pixel_map(strips)
+    _draw_face(pixels, WATCHING_FACES[face])
+    sockets = _eye_sockets(pixels, WATCHING_FACES[face])
 
     now = utime.ticks_ms()
     gx, gy = 0.0, 0.0
@@ -233,15 +236,13 @@ def watching_jack(strips, face=0):
             # peak is computed unclipped, so a pupil sliding behind the
             # socket edge still fades out.
             peak = (1 - abs(px - round(px))) * (1 - abs(py - round(py)))
-            for col, row, strand, index in cells:
+            for col, row, buf, ro, go, bo in cells:
                 w = max(0.0, 1 - abs(col - px)) * max(0.0, 1 - abs(row - py))
                 b = min(1.0, w / peak)
                 covered = min(1.0, max(0.0, lid * height - (top - row)))
-                strips[strand][index] = (
-                    int(PUPIL_COLOR[0] * b * (1 - covered) + SKIN_COLOR[0] * covered),
-                    int(PUPIL_COLOR[1] * b * (1 - covered) + SKIN_COLOR[1] * covered),
-                    int(PUPIL_COLOR[2] * b * (1 - covered) + SKIN_COLOR[2] * covered),
-                )
+                buf[ro] = int(PUPIL_COLOR[0] * b * (1 - covered) + SKIN_COLOR[0] * covered)
+                buf[go] = int(PUPIL_COLOR[1] * b * (1 - covered) + SKIN_COLOR[1] * covered)
+                buf[bo] = int(PUPIL_COLOR[2] * b * (1 - covered) + SKIN_COLOR[2] * covered)
 
         show_all(strips)
 

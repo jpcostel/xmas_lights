@@ -1,4 +1,5 @@
 import time, random, math
+from wiring import show_all, pixel_map, restore
 
 ROWS = 8
 COLS = 25
@@ -11,29 +12,6 @@ MAX_FLAKES = 150
 SPAWN_INTERVAL = 0.016   # seconds
 DT = 0.016             # frame time
 INTENSITY = 50      # max percentage of total columns
-
-def grid_to_pixel(row, col):
-    """
-    row: 0 = bottom, 7 = top
-    col: 0 = left, 24 = right
-    returns: (strand, index)
-    """
-
-    if row < 4:
-        strand = 0
-        local_row = row
-    else:
-        strand = 1
-        local_row = row - 4
-
-    if local_row % 2 == 0:
-        # right → left
-        index = local_row * COLS + (COLS - 1 - col)
-    else:
-        # left → right
-        index = local_row * COLS + col
-
-    return strand, index
 
 class Snowflake:
     def __init__(self, col, colorful):
@@ -57,6 +35,8 @@ class Snowflake:
 
 
 def snowfall_effect(strips, colorful=False):
+    pixels = pixel_map(strips)
+    blank = [bytes(len(s.buf)) for s in strips]
     flakes = []
     last_spawn = time.time()
     last_col = 0
@@ -74,9 +54,9 @@ def snowfall_effect(strips, colorful=False):
             last_spawn = now
 
         # ---- Clear LED grid ----
-        accum = [[[0.0, 0.0, 0.0] for _ in range(COLS)] for _ in range(ROWS)]
+        restore(strips, blank)
 
-        # ---- Update flakes ----
+        # ---- Update flakes, drawing each straight into the strip bytes ----
         alive = []
         for f in flakes:
             f.update(dt)
@@ -90,26 +70,21 @@ def snowfall_effect(strips, colorful=False):
             frac = f.y - row
             if 0 <= row < ROWS:
                 if frac > CUTOFF:
-                    accum[row][f.col][0] = f.color[0] * frac * b
-                    accum[row][f.col][1] = f.color[1] * frac * b
-                    accum[row][f.col][2] = f.color[2] * frac * b
+                    buf, ro, go, bo = pixels[row][f.col]
+                    buf[ro] = int(f.color[0] * frac * b)
+                    buf[go] = int(f.color[1] * frac * b)
+                    buf[bo] = int(f.color[2] * frac * b)
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
-                    accum[row - 1][f.col][0] = f.color[0] * (1.0 - frac) * b
-                    accum[row - 1][f.col][1] = f.color[1] * (1.0 - frac) * b
-                    accum[row - 1][f.col][2] = f.color[2] * (1.0 - frac) * b
+                    buf, ro, go, bo = pixels[row - 1][f.col]
+                    buf[ro] = int(f.color[0] * (1.0 - frac) * b)
+                    buf[go] = int(f.color[1] * (1.0 - frac) * b)
+                    buf[bo] = int(f.color[2] * (1.0 - frac) * b)
             alive.append(f)
 
         flakes = alive
 
-        # ---- Render to LEDs ----
-        for r in range(ROWS):
-            for c in range(COLS):
-                strand, idx = grid_to_pixel(r, c)
-                strips[strand][idx] = (int(accum[r][c][0]), int(accum[r][c][1]), int(accum[r][c][2]))
-
-        for s in strips:
-            s.write()
+        show_all(strips)
         end = time.time()
         loop_time = end - now
         time.sleep(DT - loop_time)

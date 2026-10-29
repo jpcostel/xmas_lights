@@ -1,8 +1,8 @@
 import math
 import random
 import utime
-from wiring import show_all
-from grid import grid_to_pixel, ROWS, COLS
+from wiring import show_all, pixel_map, snapshot, restore
+from grid import ROWS, COLS
 
 # ============================================================
 # CONFIGURATION
@@ -33,7 +33,7 @@ WITCH_SPEED = 5.0              # columns per second
 WITCH_BOB = 0.6                # rows of up/down drift while flying
 WITCH_BOB_HZ = 0.5
 
-FRAME_MS = 40                  # ~25 FPS
+FRAME_MS = 16                  # ~60 FPS
 
 # Witch on a broom, facing right (flipped when flying left): pointy hat,
 # a long broom handle out front, and bristles flaring behind. At 8 rows
@@ -97,19 +97,31 @@ def _witch_cells(direction):
     """(dx, dy) offsets of the witch's pixels, dy measured up from her bottom row."""
     cells = []
     h = len(WITCH)
+    w = len(WITCH[0])
     for r, line in enumerate(WITCH):
-        if direction < 0:
-            line = line[::-1]
         for c, ch in enumerate(line):
             if ch == "#":
-                cells.append((c, h - 1 - r))
+                # Mirror by column rather than line[::-1]: MicroPython
+                # doesn't support slices with a negative step.
+                cells.append((c if direction > 0 else w - 1 - c, h - 1 - r))
     return cells
 
 
 def moon_witch(strips):
-    bg = _sky_and_moon()
     stars = _place_stars()
-    pixel = [[grid_to_pixel(row, col) for col in range(COLS)] for row in range(ROWS)]
+    pixels = pixel_map(strips)
+
+    # Sky and moon never change: draw them once and copy the bytes back
+    # at the start of each frame, then draw stars and witch on top.
+    bg = _sky_and_moon()
+    for row in range(ROWS):
+        for col in range(COLS):
+            buf, ro, go, bo = pixels[row][col]
+            c = bg[row][col]
+            buf[ro] = c[0]
+            buf[go] = c[1]
+            buf[bo] = c[2]
+    background = snapshot(strips)
 
     witch_w = len(WITCH[0])
     witch_h = len(WITCH)
@@ -126,19 +138,14 @@ def moon_witch(strips):
         # ----------------------------------------------------
         # BACKGROUND + TWINKLING STARS
         # ----------------------------------------------------
-        for row in range(ROWS):
-            for col in range(COLS):
-                strand, index = pixel[row][col]
-                strips[strand][index] = bg[row][col]
+        restore(strips, background)
 
         for col, row, hz, phase in stars:
             b = 0.25 + 0.75 * (0.5 + 0.5 * math.sin(2 * math.pi * hz * t + phase))
-            strand, index = pixel[row][col]
-            strips[strand][index] = (
-                int(STAR_COLOR[0] * b),
-                int(STAR_COLOR[1] * b),
-                int(STAR_COLOR[2] * b),
-            )
+            buf, ro, go, bo = pixels[row][col]
+            buf[ro] = int(STAR_COLOR[0] * b)
+            buf[go] = int(STAR_COLOR[1] * b)
+            buf[bo] = int(STAR_COLOR[2] * b)
 
         # ----------------------------------------------------
         # WITCH: an occasional silhouette fly-by
@@ -163,8 +170,10 @@ def moon_witch(strips):
                     col = x + dx
                     row = y + dy
                     if 0 <= col < COLS and 0 <= row < ROWS:
-                        strand, index = pixel[row][col]
-                        strips[strand][index] = (0, 0, 0)
+                        buf, ro, go, bo = pixels[row][col]
+                        buf[ro] = 0
+                        buf[go] = 0
+                        buf[bo] = 0
 
         show_all(strips)
 

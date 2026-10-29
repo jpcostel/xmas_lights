@@ -1,8 +1,8 @@
 import math
 import random
 import utime
-from wiring import show_all
-from grid import grid_to_pixel, ROWS, COLS
+from wiring import show_all, pixel_map, snapshot, restore
+from grid import ROWS, COLS
 
 # ============================================================
 # CONFIGURATION
@@ -24,7 +24,7 @@ FLAP_HZ = (3.0, 5.0)           # full wing beats per second
 WOBBLE = 0.7                   # rows of up/down drift
 WOBBLE_HZ = (0.4, 1.0)
 
-FRAME_MS = 33                  # ~30 FPS
+FRAME_MS = 16                  # ~60 FPS
 
 # Wings up / wings down (ears showing), drawn top row first.
 BAT_FRAMES = [
@@ -96,8 +96,19 @@ def _sky():
 
 
 def bat_swarm(strips):
+    pixels = pixel_map(strips)
+
+    # The sky never changes: draw it once and copy the bytes back at the
+    # start of each frame, then draw the bats on top.
     sky = _sky()
-    pixel = [[grid_to_pixel(row, col) for col in range(COLS)] for row in range(ROWS)]
+    for row in range(ROWS):
+        s = sky[row]
+        for col in range(COLS):
+            buf, ro, go, bo = pixels[row][col]
+            buf[ro] = s[0]
+            buf[go] = s[1]
+            buf[bo] = s[2]
+    background = snapshot(strips)
 
     bats = []
     now = utime.ticks_ms()
@@ -135,11 +146,7 @@ def bat_swarm(strips):
         # ----------------------------------------------------
         # Bats snap to whole cells: blending across columns would smooth
         # the motion but smear their one-pixel wing tips into grey.
-        for row in range(ROWS):
-            s = sky[row]
-            for col in range(COLS):
-                strand, index = pixel[row][col]
-                strips[strand][index] = s
+        restore(strips, background)
 
         alive = []
         for bat in bats:
@@ -153,8 +160,10 @@ def bat_swarm(strips):
                 col = x0 + dx
                 row = y0 + dy
                 if 0 <= col < COLS and 0 <= row < ROWS:
-                    strand, index = pixel[row][col]
-                    strips[strand][index] = (0, 0, 0)
+                    buf, ro, go, bo = pixels[row][col]
+                    buf[ro] = 0
+                    buf[go] = 0
+                    buf[bo] = 0
         bats = alive
 
         show_all(strips)
