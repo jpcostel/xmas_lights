@@ -1,5 +1,7 @@
+import array
 import machine
 import micropython
+import random
 import neopixel
 from grid import grid_to_pixel, ROWS, COLS
 
@@ -79,10 +81,50 @@ def get_color_mask(strips, pallet=0):
 
 BRIGHTNESS = 1.0
 
+# Gamma correction makes fades, twinkles and trails dim evenly to the eye
+# (LED output is linear, eyes aren't). 1.0 turns it off. Colors an effect
+# designs should go through true_color() so they look the same either way.
+GAMMA = 2.2
+
+# Temporal dithering: alternate between neighbouring LED levels frame to
+# frame to show the shades in between. Only levels of at least
+# DITHER_FLOOR are dithered (below that, slow 0/1 alternation reads as
+# flicker), and the in-between amount is rounded to 1/DITHER_STEPS so
+# the alternation stays quick enough to blend.
+DITHER = True
+DITHER_FLOOR = 2
+DITHER_STEPS = 8
+
+_table = None
+
+
 def set_brightness(value):
-    """Set the global brightness scale (0.0-1.0) applied by show_all()."""
-    global BRIGHTNESS
+    """Set the global brightness (0.0-1.0) applied by show_all().
+
+    The slider is perceptual when gamma is on: 0.5 looks half as bright.
+    """
+    global BRIGHTNESS, _table
     BRIGHTNESS = max(0.0, min(1.0, value))
+    _table = None
+
+
+def set_gamma(value):
+    """Change gamma live (1.0 = off), e.g. to compare from the REPL.
+    Restart the scene afterwards so its true_color() colors are redone."""
+    global GAMMA, _table
+    GAMMA = max(1.0, value)
+    _table = None
+
+
+def true_color(color):
+    """The color to draw so the LEDs show `color` exactly as they would
+    with gamma off. Use it for designed colors (palettes, backgrounds) so
+    gamma only changes how things fade and blend, never their hue."""
+    m = max(color)
+    if GAMMA == 1.0 or m == 0:
+        return (int(color[0]), int(color[1]), int(color[2]))
+    k = 255 * (m / 255) ** (1 / GAMMA) / m
+    return (int(color[0] * k + 0.5), int(color[1] * k + 0.5), int(color[2] * k + 0.5))
 
 
 def all_pixels(strips, color):
@@ -91,42 +133,102 @@ def all_pixels(strips, color):
         strip.fill(color)
 
 
+def _build_table():
+    """Per-pixel scale, indexed by the pixel's brightest channel m:
+    256 * out(m) / m, where out() applies brightness then gamma.
+
+    Scaling all three channels by the same factor keeps the hue; only how
+    bright the pixel is gets gamma-corrected. Values are 8.8 fixed point,
+    and never exceed 256, so channel * scale fits in 16 bits.
+    """
+    t = array.array("H", [0] * 256)
+    for m in range(1, 256):
+        out = 255 * (BRIGHTNESS * m / 255) ** GAMMA
+        t[m] = min(256, int(256 * out / m + 0.5))
+    return t
+
+
 @micropython.viper
-def _scale_bytes(src: ptr8, dst: ptr8, n: int, k: int):
-    """dst[i] = src[i] * k / 256, compiled to machine code."""
-    for i in range(n):
-        dst[i] = (src[i] * k) >> 8
+def _render(src: ptr8, dst: ptr8, err: ptr8, n: int, table: ptr16,
+            dither: int, floor: int, step_shift: int):
+    """Gamma/brightness via table, then temporal dithering, into dst.
+
+    err holds each channel's leftover fraction (out of 256) from earlier
+    frames; adding it before rounding down spreads the fraction over time.
+    """
+    half = (1 << step_shift) >> 1
+    i = 0
+    while i < n:
+        a = src[i]
+        b = src[i + 1]
+        c = src[i + 2]
+        m = a
+        if b > m:
+            m = b
+        if c > m:
+            m = c
+        t = table[m]
+        j = i
+        while j < i + 3:
+            x = src[j] * t
+            hi = x >> 8
+            if dither != 0 and hi >= floor:
+                lo = (((x & 255) + half) >> step_shift) << step_shift
+                acc = err[j] + lo
+                hi += acc >> 8
+                err[j] = acc & 255
+            else:
+                hi = (x + 128) >> 8
+            if hi > 255:
+                hi = 255
+            dst[j] = hi
+            j += 1
+        i += 3
 
 
-_dim_bufs = {}
+_out_bufs = {}
+_err_bufs = {}
 
 
 def show_all(strips):
-    """Push updates to all strips, scaled by the global brightness.
+    """Push updates to all strips with brightness, gamma and dithering.
 
-    Scaling is applied only to what's written to the hardware: each strip's
-    unscaled bytes are scaled into a scratch buffer, which is swapped in for
-    the write and then swapped back out. Effects (e.g. the ripple code in
+    These are applied only to what's written to the hardware: each strip's
+    bytes are rendered into a scratch buffer, which is swapped in for the
+    write and then swapped back out. Effects (e.g. the ripple code in
     stars.py) read back the buffer to compute the next frame, so baking
-    BRIGHTNESS into it would compound the dimming every frame.
+    any of this into it would compound every frame.
 
-    The scaling runs as viper code on the raw bytes. Going through
+    The rendering runs as viper code on the raw bytes. Going through
     strip[i] instead (neopixel is plain Python on the Pico) took ~77ms a
     frame, capping every scene at ~12 FPS whenever the lights were dimmed.
     """
-    if BRIGHTNESS >= 1.0:
+    global _table
+    if BRIGHTNESS >= 1.0 and GAMMA == 1.0:
         for strip in strips:
             strip.write()
         return
 
-    k = int(BRIGHTNESS * 256)
+    if _table is None:
+        _table = _build_table()
+    # Fractions are rounded to multiples of 256 / DITHER_STEPS.
+    step_shift = 0
+    s = 256 // DITHER_STEPS
+    while s > 1:
+        s >>= 1
+        step_shift += 1
     for strip in strips:
         buf = strip.buf
-        dim = _dim_bufs.get(id(strip))
-        if dim is None or len(dim) != len(buf):
-            dim = _dim_bufs[id(strip)] = bytearray(len(buf))
-        _scale_bytes(buf, dim, len(buf), k)
-        strip.buf = dim
+        key = id(strip)
+        out = _out_bufs.get(key)
+        if out is None or len(out) != len(buf):
+            out = _out_bufs[key] = bytearray(len(buf))
+            # Random starting leftovers so neighbouring pixels don't all
+            # step up on the same frame.
+            _err_bufs[key] = bytearray(random.getrandbits(8) for _ in range(len(buf)))
+        _render(buf, out, _err_bufs[key], len(buf), _table,
+                1 if DITHER else 0, DITHER_FLOOR, step_shift)
+        strip.buf = out
         try:
             strip.write()
         finally:

@@ -2,6 +2,7 @@ import math
 import micropython
 import random
 import utime
+import wiring
 from wiring import *
 from grid import grid_to_pixel as xy_to_strip
 
@@ -72,7 +73,8 @@ def _draw_stars(stars, now_ms, color_mask, pixels):
             # Low → high → low cosine envelope
             env = 0.5 * (1 - math.cos(two_pi * phase))
             b = star.min_b + (star.max_b - star.min_b) * env
-        b = b * b  # simple gamma-ish correction
+        # (This used to square b as a rough gamma curve; show_all's gamma
+        # correction now does that properly.)
 
         base = color_mask[star.strand][star.index]
         buf, ro, go, bo = pixels[star.strand][star.index]
@@ -119,17 +121,20 @@ class Ripple:
 
 
 @micropython.native
-def _apply_ripple(cells, r, reach, inv_2w2, strength):
+def _apply_ripple(cells, r, reach, inv_2w2, strength, boost):
     """Brighten the pixels near a ripple's ring (a Gaussian in distance).
 
     Pixels more than `reach` from the ring would change by under one
     brightness step, so they're skipped rather than run through exp().
+    boost[i] is (1 + i/255) ** (1/gamma): the factor that, after show_all's
+    gamma correction, brightens the LEDs by 1 + i/255. A table because
+    pow() per pixel cost this scene ~10 FPS.
     """
     for d, buf, ro, go, bo in cells:
         x = d - r
         if x > reach or x < -reach:
             continue
-        scale = 1.0 + strength * math.exp(-x * x * inv_2w2)
+        scale = boost[int(strength * math.exp(-x * x * inv_2w2) * 255)]
         v = int(buf[ro] * scale)
         buf[ro] = v if v < 255 else 255
         v = int(buf[go] * scale)
@@ -144,18 +149,27 @@ def _apply_ripple(cells, r, reach, inv_2w2, strength):
 
 def starfield(strips, ripples_on=True, pallet=0):
 
-    color_mask = get_color_mask(strips, pallet=pallet)
+    palette = get_color_mask(strips, pallet=pallet)
+    # Palette colors adjusted so gamma correction leaves them unchanged.
+    color_mask = [[true_color(c) for c in strand] for strand in palette]
     pixels = strand_map(strips)
+    inv_gamma = 1 / wiring.GAMMA
+    boost = [(1.0 + i / 255) ** inv_gamma for i in range(256)]
 
     # The dimmed palette background never changes: draw it once and copy
     # the bytes back at the start of each frame.
     for s in range(len(strips)):
-        mask = color_mask[s]
+        mask = palette[s]
         for i in range(len(strips[s])):
             buf, ro, go, bo = pixels[s][i]
-            buf[ro] = int(mask[i][0] * BACKGROUND_BRIGHTNESS)
-            buf[go] = int(mask[i][1] * BACKGROUND_BRIGHTNESS)
-            buf[bo] = int(mask[i][2] * BACKGROUND_BRIGHTNESS)
+            c = true_color((
+                mask[i][0] * BACKGROUND_BRIGHTNESS,
+                mask[i][1] * BACKGROUND_BRIGHTNESS,
+                mask[i][2] * BACKGROUND_BRIGHTNESS,
+            ))
+            buf[ro] = c[0]
+            buf[go] = c[1]
+            buf[bo] = c[2]
     background = snapshot(strips)
 
     stars = []
@@ -213,6 +227,7 @@ def starfield(strips, ripples_on=True, pallet=0):
                     ripple.reach,
                     1 / (2 * ripple.width ** 2),
                     ripple.strength,
+                    boost,
                 )
                 new_ripples.append(ripple)
         ripples = new_ripples

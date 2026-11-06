@@ -1,4 +1,5 @@
 import time, random, math
+import wiring
 from wiring import show_all, pixel_map, restore
 
 ROWS = 8
@@ -37,6 +38,12 @@ class Snowflake:
 def snowfall_effect(strips, colorful=False):
     pixels = pixel_map(strips)
     blank = [bytes(len(s.buf)) for s in strips]
+    # Flake brightness was tuned as raw LED levels; undo show_all's gamma
+    # so snow looks exactly as it always has.
+    inv_gamma = 1 / wiring.GAMMA
+    # curve[i] = (i/255) ** (1/gamma), as a table: pow() per flake slowed
+    # snow down, and its fall speed is tied to the frame rate.
+    curve = [(i / 255) ** inv_gamma for i in range(256)]
     flakes = []
     last_spawn = time.time()
     last_col = 0
@@ -71,15 +78,17 @@ def snowfall_effect(strips, colorful=False):
             if 0 <= row < ROWS:
                 if frac > CUTOFF:
                     buf, ro, go, bo = pixels[row][f.col]
-                    buf[ro] = int(f.color[0] * frac * b)
-                    buf[go] = int(f.color[1] * frac * b)
-                    buf[bo] = int(f.color[2] * frac * b)
+                    v = curve[int(frac * b * 255)]
+                    buf[ro] = int(f.color[0] * v)
+                    buf[go] = int(f.color[1] * v)
+                    buf[bo] = int(f.color[2] * v)
             if 0 <= row - 1 < ROWS:
                 if (1.0 - frac) > CUTOFF:
                     buf, ro, go, bo = pixels[row - 1][f.col]
-                    buf[ro] = int(f.color[0] * (1.0 - frac) * b)
-                    buf[go] = int(f.color[1] * (1.0 - frac) * b)
-                    buf[bo] = int(f.color[2] * (1.0 - frac) * b)
+                    v = curve[int((1.0 - frac) * b * 255)]
+                    buf[ro] = int(f.color[0] * v)
+                    buf[go] = int(f.color[1] * v)
+                    buf[bo] = int(f.color[2] * v)
             alive.append(f)
 
         flakes = alive

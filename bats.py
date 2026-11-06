@@ -1,7 +1,7 @@
 import math
 import random
 import utime
-from wiring import show_all, pixel_map, snapshot, restore
+from wiring import show_all, pixel_map, snapshot, restore, true_color
 from grid import ROWS, COLS
 
 # ============================================================
@@ -102,7 +102,7 @@ def bat_swarm(strips):
     # start of each frame, then draw the bats on top.
     sky = _sky()
     for row in range(ROWS):
-        s = sky[row]
+        s = true_color(sky[row])
         for col in range(COLS):
             buf, ro, go, bo = pixels[row][col]
             buf[ro] = s[0]

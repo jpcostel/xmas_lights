@@ -2,7 +2,7 @@ import math
 import micropython
 import random
 import utime
-from wiring import show_all, pixel_map, restore
+from wiring import show_all, pixel_map, restore, true_color
 from grid import ROWS, COLS
 
 # ============================================================
@@ -17,7 +17,8 @@ LEAF_COLORS = [
     (200, 170, 10),    # gold
     (130, 40, 0),      # brown
 ]
-LEAF_BRIGHTNESS = (0.7, 1.0)   # per-leaf variation
+# Brightness values below are as perceived (show_all applies gamma).
+LEAF_BRIGHTNESS = (0.85, 1.0)  # per-leaf variation
 
 LEAVES_PER_SEC = 1.4
 MAX_FALLING = 14
@@ -25,7 +26,7 @@ FALL_SPEED = (0.9, 1.6)        # rows/sec, averaged over a swing
 SWAY = (0.7, 1.8)              # columns either side of a leaf's path
 SWAY_HZ = (0.2, 0.4)           # full side-to-side swings per second
 FLUTTER_HZ = (0.4, 1.2)        # how fast a leaf turns over
-FLUTTER_DEPTH = 0.45           # how much it dims when edge-on
+FLUTTER_DEPTH = 0.25           # how much it dims when edge-on
 
 WIND = 0.5                     # columns/sec of slowly wandering breeze
 WIND_PERIOD_S = 23
@@ -38,7 +39,7 @@ REST_MS = (4000, 8000)         # how long a landed leaf lingers...
 REST_FADE_MS = 2500            # ...before fading away over this long
 SETTLE_SPEED = 2.0             # rows/sec a resting leaf slides down
 LAND_BLEND_MS = 400            # ease from fluttering to resting brightness
-REST_BRIGHTNESS = 0.85
+REST_BRIGHTNESS = 0.93
 
 FRAME_MS = 16                  # ~60 FPS
 MAX_STEP_MS = 100              # longest single step if a frame runs late
@@ -91,10 +92,10 @@ def _draw_leaf(pixels, x, y, r, g, b):
 # ============================================================
 
 class Leaf:
-    def __init__(self, x):
+    def __init__(self, x, colors):
         self.x = x                       # center of its swing
         self.y = ROWS + random.uniform(0.2, 1.0)   # starts just above the top
-        c = random.choice(LEAF_COLORS)
+        c = random.choice(colors)
         k = random.uniform(*LEAF_BRIGHTNESS)
         self.color = (c[0] * k, c[1] * k, c[2] * k)
         self.fall = random.uniform(*FALL_SPEED)
@@ -153,6 +154,7 @@ class Resting:
 def falling_leaves(strips):
     pixels = pixel_map(strips)
     blank = [bytes(len(s.buf)) for s in strips]
+    colors = [true_color(c) for c in LEAF_COLORS]
 
     falling = []
     resting = []
@@ -195,7 +197,7 @@ def falling_leaves(strips):
         while due >= 1:
             due -= 1
             if len(falling) < MAX_FALLING:
-                falling.append(Leaf(random.uniform(-1.0, COLS) - wind * 3))
+                falling.append(Leaf(random.uniform(-1.0, COLS) - wind * 3, colors))
 
         # ----------------------------------------------------
         # PILE: how high the resting leaves are stacked per column

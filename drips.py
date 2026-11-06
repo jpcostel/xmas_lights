@@ -2,7 +2,8 @@ import math
 import micropython
 import random
 import utime
-from wiring import show_all, pixel_map
+import wiring
+from wiring import show_all, pixel_map, true_color
 from grid import ROWS, COLS
 
 # ============================================================
@@ -90,9 +91,13 @@ class Drip:
 
 
 def drip(strips, liquid=0):
-    body = LIQUIDS[liquid]["body"]
-    head = LIQUIDS[liquid]["head"]
-    fade_ms = LIQUIDS[liquid]["fade"]
+    body = true_color(LIQUIDS[liquid]["body"])
+    head = true_color(LIQUIDS[liquid]["head"])
+    # Gamma correction makes an exponential fade fall GAMMA times faster in
+    # LED terms; stretching the time constant to match keeps trails exactly
+    # as long as before, with dithering smoothing their faint tail.
+    fade_ms = LIQUIDS[liquid]["fade"] * wiring.GAMMA
+    puddle_fade_ms = PUDDLE_FADE_MS * wiring.GAMMA
 
     # Grid rows here count down from the top edge: r = 0 is the top row.
     pixels = pixel_map(strips)
@@ -143,7 +148,7 @@ def drip(strips, liquid=0):
             next_drip = utime.ticks_add(frame_start, random.randint(*DRIP_EVERY_MS))
 
         _decay(trail, math.exp(-step_ms / fade_ms), dry)
-        puddle_keep = math.exp(-step_ms / PUDDLE_FADE_MS)
+        puddle_keep = math.exp(-step_ms / puddle_fade_ms)
         for c in range(COLS):
             puddle[c] *= puddle_keep
 

@@ -1,7 +1,8 @@
 import math
 import random
 import utime
-from wiring import show_all, pixel_map, snapshot, restore
+import wiring
+from wiring import show_all, pixel_map, snapshot, restore, true_color
 from grid import ROWS, COLS
 
 # ============================================================
@@ -117,11 +118,14 @@ def moon_witch(strips):
     for row in range(ROWS):
         for col in range(COLS):
             buf, ro, go, bo = pixels[row][col]
-            c = bg[row][col]
+            c = true_color(bg[row][col])
             buf[ro] = c[0]
             buf[go] = c[1]
             buf[bo] = c[2]
     background = snapshot(strips)
+    star_color = true_color(STAR_COLOR)
+    # Stars dim to the same level as before gamma correction.
+    star_min = 0.25 ** (1 / wiring.GAMMA)
 
     witch_w = len(WITCH[0])
     witch_h = len(WITCH)
@@ -141,11 +145,11 @@ def moon_witch(strips):
         restore(strips, background)
 
         for col, row, hz, phase in stars:
-            b = 0.25 + 0.75 * (0.5 + 0.5 * math.sin(2 * math.pi * hz * t + phase))
+            b = star_min + (1 - star_min) * (0.5 + 0.5 * math.sin(2 * math.pi * hz * t + phase))
             buf, ro, go, bo = pixels[row][col]
-            buf[ro] = int(STAR_COLOR[0] * b)
-            buf[go] = int(STAR_COLOR[1] * b)
-            buf[bo] = int(STAR_COLOR[2] * b)
+            buf[ro] = int(star_color[0] * b)
+            buf[go] = int(star_color[1] * b)
+            buf[bo] = int(star_color[2] * b)
 
         # ----------------------------------------------------
         # WITCH: an occasional silhouette fly-by
