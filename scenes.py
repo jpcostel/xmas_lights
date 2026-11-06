@@ -109,6 +109,11 @@ SCENES = {
         "web_label": "🩸 Dripping Blood",
         "cmd": "import drips; drips.drip(strips, 1)",
     },
+    "falling_leaves": {
+        "name": "Falling Leaves",
+        "web_label": "🍂 Falling Leaves",
+        "cmd": "import leaves; leaves.falling_leaves(strips)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
