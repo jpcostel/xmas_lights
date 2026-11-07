@@ -42,7 +42,7 @@ SETTLE_SPEED = 2.0             # rows/sec a resting leaf slides down
 LAND_BLEND_MS = 400            # ease from fluttering to resting brightness
 REST_BRIGHTNESS = 0.93
 
-LEAF_RADIUS = 0.75              # LEDs closer than this (in LED spacings) to a
+LEAF_RADIUS = 1.5              # LEDs closer than this (in LED spacings) to a
                                # leaf share its light; smaller = tighter leaves
                                # (keep above 0.75, or a leaf can fall between)
 
