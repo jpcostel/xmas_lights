@@ -139,6 +139,12 @@ SCENES = {
         "web_label": "🕯️ Candlelight",
         "cmd": "import candles; candles.candlelight(strips)",
     },
+    # Fed by weather_service.py on the Pi while it runs.
+    "live_weather": {
+        "name": "Live Weather",
+        "web_label": "🌦️ Live Weather",
+        "cmd": "import weather; weather.live_weather(strips)",
+    },
 }
 
 DEFAULT_SCENE = "snow"

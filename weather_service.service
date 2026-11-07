@@ -1,0 +1,32 @@
+# /etc/systemd/system/weather_service.service
+[Unit]
+Description=Live weather for the mantle lights
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Run as pi user
+User=jpcostel
+Group=jpcostel
+
+# Project directory
+WorkingDirectory=/home/jpcostel/Projects/xmas_lights
+
+# IMPORTANT: use venv python if you have one
+ExecStart=/home/jpcostel/Projects/xmas_lights/.venv/bin/python3 /home/jpcostel/Projects/xmas_lights/weather_service.py
+
+# Restart on crash
+Restart=always
+RestartSec=3
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Log output
+StandardOutput=append:/var/log/weather_service.log
+StandardError=append:/var/log/weather_service.log
+
+[Install]
+WantedBy=multi-user.target
