@@ -42,9 +42,14 @@ SETTLE_SPEED = 2.0             # rows/sec a resting leaf slides down
 LAND_BLEND_MS = 400            # ease from fluttering to resting brightness
 REST_BRIGHTNESS = 0.93
 
-LEAF_RADIUS = 1.5              # LEDs closer than this (in LED spacings) to a
-                               # leaf share its light; smaller = tighter leaves
-                               # (keep above 0.75, or a leaf can fall between)
+# How far a leaf's light reaches, in LED spacings, sideways and up/down.
+# Wider than tall makes a flat leaf. Keep LEAF_HEIGHT at 0.8 or more:
+# smaller makes hand-offs between rows jerky, and below ~0.6 a leaf can
+# vanish between LEDs.
+LEAF_WIDTH = 2.0
+LEAF_HEIGHT = 0.8
+LEAF_CURL = 0.5                # rows the leaf rises one LED out from its middle,
+                               # so its edges curl up (0 = flat, negative = droop)
 
 FRAME_MS = 16                  # ~60 FPS
 MAX_STEP_MS = 100              # longest single step if a frame runs late
@@ -55,13 +60,16 @@ MAX_STEP_MS = 100              # longest single step if a frame runs late
 # ============================================================
 
 @micropython.native
-def _draw_leaf(pixels, x, y, r, g, b, radius, inv_gamma):
+def _draw_leaf(pixels, x, y, r, g, b, width, height, curl, inv_gamma):
     """Light the LEDs near a leaf by how close each one is to it.
 
     The leaf is a point that moves anywhere on the grid, not just from LED
-    to LED. Every LED within `radius` of it gets a share of its light that
-    falls smoothly from full right at the leaf to nothing at `radius`:
-    (1 - d^2/radius^2)^2, which has no corners, so motion never jerks.
+    to LED. Every LED inside an ellipse `width` across and `height` high
+    (half-widths, in LED spacings) around it gets a share of its light
+    that falls smoothly from full at the leaf to nothing at the ellipse's
+    edge: (1 - d^2)^2, with d measured relative to the ellipse, which has
+    no corners, so motion never jerks. The ellipse is bent so its middle
+    line rises by `curl` * (sideways distance)^2: the edges curl up.
 
     The shares are made to add up to the leaf's full light in real light
     output, then raised to 1/gamma so show_all's gamma correction turns
@@ -70,20 +78,23 @@ def _draw_leaf(pixels, x, y, r, g, b, radius, inv_gamma):
     fine steps. LEDs past the grid's edge still take their share, so a
     leaf fades as it drifts off.
     """
-    r2 = radius * radius
-    x_lo = int(math.floor(x - radius))
-    y_lo = int(math.floor(y - radius))
-    span = int(math.ceil(2 * radius)) + 1
+    inv_w2 = 1.0 / (width * width)
+    inv_h2 = 1.0 / (height * height)
+    x_lo = int(math.floor(x - width))
+    x_hi = int(math.ceil(x + width))
+    rise = curl * width * width        # how far the tips are bent
+    y_lo = int(math.floor(y - height + (rise if rise < 0.0 else 0.0)))
+    y_hi = int(math.ceil(y + height + (rise if rise > 0.0 else 0.0)))
     total = 0.0
     near = []
-    for row in range(y_lo, y_lo + span + 1):
-        oy = row - y
-        for col in range(x_lo, x_lo + span + 1):
+    for row in range(y_lo, y_hi + 1):
+        for col in range(x_lo, x_hi + 1):
             ox = col - x
-            d2 = ox * ox + oy * oy
-            if d2 >= r2:
+            oy = row - y - curl * ox * ox   # measured from the bent middle line
+            d2 = ox * ox * inv_w2 + oy * oy * inv_h2
+            if d2 >= 1.0:
                 continue
-            f = 1.0 - d2 / r2
+            f = 1.0 - d2
             f *= f
             total += f
             if 0 <= row < ROWS and 0 <= col < COLS:
@@ -170,7 +181,9 @@ def falling_leaves(strips):
     blank = [bytes(len(s.buf)) for s in strips]
     colors = [true_color(c) for c in LEAF_COLORS]
     inv_gamma = 1 / wiring.GAMMA
-    radius = LEAF_RADIUS
+    width = LEAF_WIDTH
+    height = LEAF_HEIGHT
+    curl = LEAF_CURL
 
     falling = []
     resting = []
@@ -241,7 +254,7 @@ def falling_leaves(strips):
         for leaf in resting:
             b = leaf.brightness(frame_start)
             c = leaf.color
-            _draw_leaf(pixels, leaf.x, leaf.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
+            _draw_leaf(pixels, leaf.x, leaf.y, c[0] * b, c[1] * b, c[2] * b, width, height, curl, inv_gamma)
 
         # ----------------------------------------------------
         # FALLING LEAVES
@@ -261,11 +274,11 @@ def falling_leaves(strips):
                 resting.append(landed)
                 stack[col] += 1
                 # Draw it this frame too, or it blinks out as it lands.
-                _draw_leaf(pixels, x, landed.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
+                _draw_leaf(pixels, x, landed.y, c[0] * b, c[1] * b, c[2] * b, width, height, curl, inv_gamma)
                 continue
             if leaf.y < -1.0 or x < -2.0 or x > COLS + 1.0:
                 continue
-            _draw_leaf(pixels, x, leaf.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
+            _draw_leaf(pixels, x, leaf.y, c[0] * b, c[1] * b, c[2] * b, width, height, curl, inv_gamma)
             still.append(leaf)
         falling = still
 
