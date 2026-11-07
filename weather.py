@@ -24,14 +24,14 @@ EASE_S = 15.0                  # seconds to settle most of the way to a new look
 CLOUD_WIDTH = 6.0              # columns across a low cloud...
 CLOUD_HEIGHT = 2.5             # ...and rows
 CLOUD_EDGE = 0.25              # how soft their edges are (0-1)
-CLOUD_SHADE = 0.65             # thicker parts of a cloud this much darker...
-CLOUD_TEXTURE = 2.0            # ...with this much more contrast in the lumps
+CLOUD_SHADE = 0.75             # thicker parts of a cloud this much darker...
+CLOUD_TEXTURE = 2.4            # ...with this much more contrast in the lumps
 CLOUD_LOW_DOWN = 6             # low cloud thicker toward the horizon (per row)
 FRONT_SHADE = 0.8              # low cloud this bright...
 BACK_SHADE = 1.15              # ...and the higher cloud behind it this bright
 BACK_SIZE = 1.8                # higher clouds are this much bigger...
 BACK_SPEED = 0.5               # ...and move this much slower
-CLOUD_DRIFT = 0.1              # columns/sec per m/s of wind across the mantle, up at the clouds
+CLOUD_DRIFT = 0.14             # columns/sec per m/s of wind across the mantle, up at the clouds
 CLOUD_CREEP = 0.04             # columns/sec they drift even on a still day
 CLOUD_CHANGE = 0.03            # how quickly they change shape
 
