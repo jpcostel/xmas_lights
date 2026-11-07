@@ -41,6 +41,10 @@ FACING = 90                    # compass bearing you face looking at the mantle 
 
 FETCH_EVERY_S = 600
 SEND_EVERY_S = 30              # the sun moves; resend this often while the scene runs
+# After a scene command, ask whether Live Weather is listening at these
+# times (seconds): it takes a moment to start.
+ASK_AFTER_S = (1, 3, 6, 12)
+QUESTION, ANSWER = "#?", "#WX!"
 STALE_S = 3 * 3600             # after this long without a fetch, ease toward calm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -53,6 +57,8 @@ INPUTS = {
     "rain": "mm/h",
     "snow": "cm/h",
     "cloud": "%",
+    "cloud_low": "%",
+    "cloud_high": "% (mid or high)",
     "wind_speed": "m/s",
     "wind_dir": "° from",
     "gust": "m/s",
@@ -62,11 +68,12 @@ INPUTS = {
     "hour": "local time",
 }
 
-CALM = {"rain": 0.0, "snow": 0.0, "cloud": 20.0, "wind_speed": 1.0, "wind_dir": 270.0,
+CALM = {"rain": 0.0, "snow": 0.0, "cloud": 20.0, "cloud_low": 20.0, "cloud_high": 10.0, "wind_speed": 1.0, "wind_dir": 270.0,
         "gust": 2.0, "visibility": 20000.0, "code": 1, "temperature": 10.0}
 
 API = "https://api.open-meteo.com/v1/forecast"
 NOW_VARS = ("temperature_2m,precipitation,rain,showers,snowfall,weather_code,cloud_cover,"
+            "cloud_cover_low,cloud_cover_mid,cloud_cover_high,"
             "wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility")
 STEP_VARS = "precipitation,snowfall,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility"
 
@@ -98,6 +105,8 @@ def observe(data, now):
         "rain": 4 * (cur["rain"] + cur["showers"]),     # per 15 min -> per hour
         "snow": 4 * cur["snowfall"],
         "cloud": cur["cloud_cover"],
+        "cloud_low": cur["cloud_cover_low"],
+        "cloud_high": max(cur["cloud_cover_mid"], cur["cloud_cover_high"]),
         "wind_speed": cur["wind_speed_10m"],
         "wind_dir": cur["wind_direction_10m"],
         "gust": cur["wind_gusts_10m"],
@@ -217,6 +226,9 @@ RAIN_NIGHT = (70, 85, 120)     # still visible, just dimmer
 SNOW_DAY = (230, 230, 245)
 SNOW_NIGHT = (110, 110, 125)
 STORM_DARK = 0.35              # cloud brightness in a thunderstorm
+SUN_WHITE = (255, 205, 120)    # sunlight through a break in the clouds...
+SUN_GOLD = (255, 140, 50)      # ...and with the sun low
+BREAK_LIGHT = 0.6              # how bright it gets in a break
 VIEW = 100                     # degrees either side of FACING that reach the grid's ends
 
 
@@ -273,6 +285,12 @@ def look(obs, when):
     dark = 1 - (1 - STORM_DARK) * (1 if storm else min(1.0, (rain + snow * 2) / 10))
     cloud_color = tuple(c * dark for c in cloud_color)
 
+    # Breaks where the sun nearly shows through: most often in a mostly
+    # cloudy sky, now and then under full overcast, never in rain.
+    breaks = _smooth(-2, 6, sun_alt) * _smooth(0.4, 0.7, cloud) * (1 - 0.65 * _smooth(0.9, 1.0, cloud))
+    breaks *= 0 if storm else 1 - min(1.0, (rain + snow * 3) / 1.5)
+    sunlight = tuple(c * BREAK_LIGHT for c in _mix(SUN_GOLD, SUN_WHITE, _smooth(2, 20, sun_alt)))
+
     # Wind across the mantle (+ to the right) and toward you.
     heading = math.radians(obs["wind_dir"] + 180)
     right = math.radians(FACING + 90)
@@ -289,6 +307,8 @@ def look(obs, when):
     return {
         "top": top, "bottom": bottom,
         "cloud": cloud, "cloud_color": cloud_color,
+        "layers": (obs["cloud_low"] / 100, obs["cloud_high"] / 100),
+        "breaks": breaks, "sunlight": sunlight,
         "stars": 1 - _smooth(-14, -6, sun_alt),
         "rain": rain, "snow": snow,
         "rain_color": _mix(RAIN_NIGHT, RAIN_DAY, day), "snow_color": _mix(SNOW_NIGHT, SNOW_DAY, day),
@@ -346,8 +366,17 @@ def main():
     tried = 0.0
     error = None
     sent = 0.0
-    was_active = False
+    listening = False          # the scene answered and hasn't stopped
+    started = None             # (command, when) last seen
+    asks = []                  # when to ask whether it's listening
     last_inputs = None
+
+    def heard():
+        try:
+            return pico_ctrl.ask(QUESTION, ANSWER)
+        except Exception as e:
+            log.warning("ask failed: %s", e)
+            return False
 
     while True:
         now = time.time()
@@ -368,23 +397,46 @@ def main():
         if data and now - fetched > STALE_S:
             live = dict(CALM)
         inputs = {**live, **{k: float(v) for k, v in overrides.items() if k != "hour"}}
+        if "cloud" in overrides:
+            # An overall cover sets both layers unless they're given too.
+            inputs["cloud_low"] = float(overrides.get("cloud_low", inputs["cloud"]))
+            inputs["cloud_high"] = float(overrides.get("cloud_high", 0.6 * inputs["cloud"]))
         params = look(inputs, when)
 
-        active = pico_ctrl.last_command() == SCENE_CMD
+        # Only send to the scene once it answers: anything else running
+        # on the Pico (or a Pico that's restarted) wouldn't read the
+        # lines, and unread input soon blocks the Pico entirely. So a
+        # few short questions after each scene command, and one before
+        # each send; no answer, no more until the next scene command.
+        command = pico_ctrl.last_command()
+        if command != started:
+            started = command
+            listening = False
+            asks = [now + s for s in ASK_AFTER_S] if command[0] == SCENE_CMD else []
+        if asks and now >= asks[0]:
+            asks.pop(0)
+            if heard():
+                listening = True
+                asks = []
+                sent = 0.0
+                log.info("Live Weather is listening")
         changed = (inputs, overrides.get("hour")) != last_inputs
-        if active and (not was_active or changed or now - sent >= SEND_EVERY_S):
-            try:
-                pico_ctrl.send_line(message(params))
-                sent = now
-            except Exception as e:
-                log.warning("send failed: %s", e)
-        was_active = active
+        if listening and (changed or now - sent >= SEND_EVERY_S):
+            if heard():
+                try:
+                    pico_ctrl.send_line(message(params))
+                    sent = now
+                except Exception as e:
+                    log.warning("send failed: %s", e)
+            else:
+                listening = False
+                log.info("Live Weather stopped answering")
         last_inputs = (inputs, overrides.get("hour"))
 
         write_json(STATE_FILE, {
             "updated": datetime.now().astimezone().isoformat(timespec="seconds"),
             "fetched": datetime.fromtimestamp(fetched).astimezone().isoformat(timespec="seconds") if fetched else None,
-            "error": error, "active": active,
+            "error": error, "active": listening,
             "live": live, "overrides": overrides, "inputs": inputs,
             "scene_time": when.astimezone().isoformat(timespec="minutes"),
             "look": params,

@@ -19,13 +19,30 @@ from grid import ROWS, COLS
 
 EASE_S = 15.0                  # seconds to settle most of the way to a new look
 
-CLOUD_WIDTH = 6.0              # columns across a cloud...
+# Two layers of cloud: low cloud in front, darker and faster, and mid or
+# high cloud behind it, lighter and slower, each as thick as reported.
+CLOUD_WIDTH = 6.0              # columns across a low cloud...
 CLOUD_HEIGHT = 2.5             # ...and rows
 CLOUD_EDGE = 0.25              # how soft their edges are (0-1)
-CLOUD_SHADE = 0.25             # thicker parts of a cloud this much darker
+CLOUD_SHADE = 0.45             # thicker parts of a cloud this much darker
+CLOUD_LOW_DOWN = 6             # low cloud thicker toward the horizon (per row)
+FRONT_SHADE = 0.8              # low cloud this bright...
+BACK_SHADE = 1.15              # ...and the higher cloud behind it this bright
+BACK_SIZE = 1.8                # higher clouds are this much bigger...
+BACK_SPEED = 0.5               # ...and move this much slower
 CLOUD_DRIFT = 0.08             # columns/sec per m/s of wind across the mantle
 CLOUD_CREEP = 0.04             # columns/sec they drift even on a still day
 CLOUD_CHANGE = 0.03            # how quickly they change shape
+
+BAND_WIDTH = 10.0              # columns across rolling bands of light and shade...
+BAND_DEPTH = 0.45              # ...this much lighter or darker...
+BAND_SPEED = 0.7               # ...moving this fast next to the low cloud
+BAND_CHANGE = 0.04
+
+BREAK_WIDTH = 9.0              # columns across a break in the clouds...
+BREAK_ROW = 4.5                # ...centered on this row...
+BREAK_HEIGHT = 3.5             # ...and fading out this many rows above and below it...
+BREAK_CHANGE = 0.025           # ...opening and closing this quickly
 
 STARS = 30
 STAR_LEVEL = (12, 70)          # dimmest and brightest (0-255, gamma off)
@@ -58,7 +75,8 @@ FRAME_MS = 16                  # ~60 FPS
 # The look until the Pi says otherwise: a clear night.
 CLEAR_NIGHT = {
     "top": [0.0, 0.0, 0.0], "bottom": [0.0, 0.0, 0.0],
-    "cloud": [0.1], "cloud_color": [0.0, 0.0, 0.0], "stars": [1.0],
+    "cloud": [0.1], "layers": [0.1, 0.1], "cloud_color": [0.0, 0.0, 0.0], "stars": [1.0],
+    "breaks": [0.0], "sunlight": [0.0, 0.0, 0.0],
     "rain": [0.0], "snow": [0.0], "storm": [0.0], "wind": [0.0, 0.0],
     "rain_color": [70.0, 85.0, 120.0], "snow_color": [110.0, 110.0, 125.0],
 }
@@ -136,11 +154,43 @@ class Look:
 # ============================================================
 
 @micropython.viper
-def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8):
-    """Fill light[] with the sky (sky[] holds each row's color), the
-    clouds over it and the stars showing through. p holds the clouds'
-    scale, position, cover, color and shading, and the stars' twinkle
-    and color."""
+def _columns(perm, p: ptr32, out: ptr32):
+    """Along a line of cols + rows steps: the rolling bands' brightness
+    (Q8 multiplier) and, for the first cols of them, how open a break
+    in the clouds is above that column (0-256)."""
+    cols = p[0]
+    bs = p[1]
+    bx = p[2]
+    bt = p[3]
+    depth = p[4]
+    ks = p[5]
+    kx = p[6]
+    kt = p[7]
+    strength = p[8]
+    steps = cols + p[9]
+    col = 0
+    while col < steps:
+        n = int(noise(col * bs + bx, bt, perm))
+        out[col * 2] = 256 + (((n - 128) * depth) >> 7)
+        b = 0
+        if col < cols:
+            # Only the noise's peaks open into breaks.
+            b = (int(noise(col * ks + kx, kt + 60000, perm)) - 135) * 3
+            if b < 0:
+                b = 0
+            elif b > 256:
+                b = 256
+        out[col * 2 + 1] = (b * strength) >> 8
+        col += 1
+
+
+@micropython.viper
+def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
+    """Fill light[] with the sky (sky[] holds each row's color), the two
+    layers of cloud over it, sunlight through any breaks and the stars
+    showing through. p holds the clouds' scales, positions, cover,
+    color and shading, the stars' twinkle and color and the sunlight;
+    fx is from _columns."""
     cols = p[0]
     rows = p[1]
     sx = p[2]
@@ -158,6 +208,18 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8):
     wg = p[14]
     wb = p[15]
     shade = p[16]
+    back_thresh = p[17]
+    bsx = p[18]
+    bsy = p[19]
+    bcx = p[20]
+    low_down = p[21]
+    front_k = p[22]
+    back_k = p[23]
+    ur = p[24]
+    ug = p[25]
+    ub = p[26]
+    break_row = p[27]
+    break_h = p[28]
     top = 255 * 16
     o = 0
     i = 0
@@ -166,25 +228,54 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8):
         br = int(sky[row * 3])
         bg = int(sky[row * 3 + 1])
         bb = int(sky[row * 3 + 2])
+        front_thresh = thresh - low_down * (rows - 1 - row)
+        up = ((row + 2) << 8) // (rows + 1)          # sunlight stronger higher up
+        # Breaks are rounded: open most around break_row.
+        dy = (row << 8) - break_row
+        across = 256 - ((((dy * dy) >> 8) * break_h) >> 8)
+        if across < 0:
+            across = 0
         col = 0
         while col < cols:
+            # The bands run on a diagonal.
+            band = fx[(col + row) * 2]
+            gap = (fx[col * 2 + 1] * across) >> 8
+            # The higher layer, behind.
+            n = int(noise(col * bsx + bcx, row * bsy + cy + 50000, perm))
+            db = ((n - back_thresh) * soft) >> 8
+            if db < 0:
+                db = 0
+            elif db > 256:
+                db = 256
+            db = (db * (256 - gap)) >> 8
+            f = (band * back_k) >> 8
+            r = br + (((((cr * f) >> 8) - br) * db) >> 8)
+            g = bg + (((((cg * f) >> 8) - bg) * db) >> 8)
+            b = bb + (((((cb * f) >> 8) - bb) * db) >> 8)
+            # The low layer in front, darker where it's thicker.
             n1 = int(noise(col * sx + cx, row * sy + cy, perm))
             n2 = int(noise(col * sx * 2 + cx * 2 + 30000, row * sy * 2 + cy + 20000, perm))
-            d = ((((n1 * 180 + n2 * 76) >> 8) - thresh) * soft) >> 8
+            d = ((((n1 * 180 + n2 * 76) >> 8) - front_thresh) * soft) >> 8
             if d < 0:
                 d = 0
             elif d > 256:
                 d = 256
-            # Thicker cloud is darker.
-            k = 256 - ((shade * n1) >> 8)
-            r = br + (((((cr * k) >> 8) - br) * d) >> 8)
-            g = bg + (((((cg * k) >> 8) - bg) * d) >> 8)
-            b = bb + (((((cb * k) >> 8) - bb) * d) >> 8)
+            d = (d * (256 - gap)) >> 8
+            f = (((band * front_k) >> 8) * (256 - ((shade * n1) >> 8))) >> 8
+            r += ((((cr * f) >> 8) - r) * d) >> 8
+            g += ((((cg * f) >> 8) - g) * d) >> 8
+            b += ((((cb * f) >> 8) - b) * d) >> 8
+            if gap > 0:
+                a = (gap * up) >> 8
+                r += (ur * a) >> 8
+                g += (ug * a) >> 8
+                b += (ub * a) >> 8
             s = int(stars[i + 0])
             if s > 0:
-                if d < 256:
+                clear = ((256 - db) * (256 - d)) >> 8
+                if clear > 0:
                     t = int(noise(tw, i * 2560 + 40000, perm))
-                    a = (((((s * (64 + t)) >> 8) * shine) >> 8) * (256 - d)) >> 8
+                    a = (((((s * (64 + t)) >> 8) * shine) >> 8) * clear) >> 8
                     r += (wr * a) >> 8
                     g += (wg * a) >> 8
                     b += (wb * a) >> 8
@@ -460,8 +551,16 @@ def live_weather(strips, inbox=None):
     stars = _place_stars()
     sky = array.array("H", [0] * (ROWS * 3))
     p = array.array("i", [COLS, ROWS, q8(1 / CLOUD_WIDTH), q8(1 / CLOUD_HEIGHT), 0, 0, 0,
-                          q8(1 / CLOUD_EDGE), 0, 0, 0, 0, 0] + to_light(STAR_COLOR) + [q8(CLOUD_SHADE)])
-    cloud_at = change_at = twinkle_at = 0.0
+                          q8(1 / CLOUD_EDGE), 0, 0, 0, 0, 0] + to_light(STAR_COLOR)
+                    + [q8(CLOUD_SHADE), 0, q8(1 / (CLOUD_WIDTH * BACK_SIZE)),
+                       q8(1 / (CLOUD_HEIGHT * BACK_SIZE)), 0, CLOUD_LOW_DOWN,
+                       q8(FRONT_SHADE), q8(BACK_SHADE), 0, 0, 0,
+                       q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2)])
+    fx = array.array("i", [0] * ((COLS + ROWS) * 2))
+    fx_p = array.array("i", [COLS, q8(1 / BAND_WIDTH), 0, 0, q8(BAND_DEPTH),
+                             q8(1 / BREAK_WIDTH), 0, 0, 0, ROWS])
+    cloud_at = back_at = change_at = twinkle_at = 0.0
+    band_at = band_change_at = break_at = break_change_at = 0.0
 
     drops = array.array("i", [0] * (RAIN_MOST * DROP))
     splashes = array.array("i", [0] * (RAIN_MOST * SPLASH_SLOT))
@@ -482,6 +581,10 @@ def live_weather(strips, inbox=None):
         dt = min(100, utime.ticks_diff(frame_start, last)) / 1000
         last = frame_start
         for line in inbox.lines():
+            if line == "#?":
+                # The Pi asking whether this scene is listening.
+                print("#WX!")
+                continue
             got = parse(line)
             if got:
                 look.receive(got)
@@ -508,22 +611,36 @@ def live_weather(strips, inbox=None):
                 c = look.get("top", ch) * (1 - f) + look.get("bottom", ch) * f
                 sky[row * 3 + ch] = int(LIGHT * (c + (FLASH_COLOR[ch] * 0.3 - c) * flash) + 0.5)
 
-        # Clouds drift with the wind across the mantle.
+        # Clouds drift with the wind across the mantle, the higher ones
+        # slower; the bands of light and shade, and the breaks, go with them.
         speed = CLOUD_DRIFT * wind + (CLOUD_CREEP if wind >= 0 else -CLOUD_CREEP)
         cloud_at = drift(cloud_at, -speed / CLOUD_WIDTH, dt)
+        back_at = drift(back_at, -speed * BACK_SPEED / (CLOUD_WIDTH * BACK_SIZE), dt)
+        band_at = drift(band_at, -speed * BAND_SPEED / BAND_WIDTH, dt)
+        break_at = drift(break_at, -speed * BACK_SPEED / BREAK_WIDTH, dt)
         change_at = drift(change_at, CLOUD_CHANGE, dt)
+        band_change_at = drift(band_change_at, BAND_CHANGE, dt)
+        break_change_at = drift(break_change_at, BREAK_CHANGE, dt)
         twinkle_at = drift(twinkle_at, TWINKLE_HZ, dt)
-        cover = look.get("cloud")
         p[4] = q8(cloud_at)
         p[5] = q8(change_at)
         # The noise value above which there's cloud: none at 0, all at 1.
-        p[6] = int(270.5 - 330 * cover)
+        p[6] = int(270.5 - 330 * look.get("layers", 0))
+        p[17] = int(270.5 - 330 * look.get("layers", 1))
+        p[20] = q8(back_at)
         for ch in range(3):
             c = look.get("cloud_color", ch)
             p[8 + ch] = int(LIGHT * (c + (FLASH_COLOR[ch] - c) * flash) + 0.5)
+            p[24 + ch] = int(LIGHT * look.get("sunlight", ch) + 0.5)
         p[11] = q8(twinkle_at)
         p[12] = int(256 * look.get("stars") + 0.5)
-        _sky(light, PERM, p, sky, stars)
+        fx_p[2] = q8(band_at)
+        fx_p[3] = q8(band_change_at)
+        fx_p[6] = q8(break_at)
+        fx_p[7] = q8(break_change_at)
+        fx_p[8] = int(256 * look.get("breaks") + 0.5)
+        _columns(PERM, fx_p, fx)
+        _sky(light, PERM, p, sky, stars, fx)
 
         dt_ms = int(dt * 1000 + 0.5)
         dt16 = int(dt * 65536 + 0.5)
