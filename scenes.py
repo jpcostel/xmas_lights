@@ -114,6 +114,21 @@ SCENES = {
         "web_label": "🍂 Falling Leaves",
         "cmd": "import leaves; leaves.falling_leaves(strips)",
     },
+    "turkey": {
+        "name": "Strutting Turkey",
+        "web_label": "🦃 Strutting Turkey",
+        "cmd": "import turkey; turkey.turkey(strips)",
+    },
+    "hearth_fire": {
+        "name": "Hearth Fire",
+        "web_label": "🔥 Hearth Fire",
+        "cmd": "import fire; fire.hearth_fire(strips)",
+    },
+    "harvest_glow": {
+        "name": "Harvest Glow",
+        "web_label": "🌾 Harvest Glow",
+        "cmd": "import harvest; harvest.harvest_glow(strips)",
+    },
 }
 
 DEFAULT_SCENE = "snow"

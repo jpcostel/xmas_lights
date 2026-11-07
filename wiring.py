@@ -95,6 +95,19 @@ DITHER = True
 DITHER_FLOOR = 2
 DITHER_STEPS = 8
 
+# Power limit: show_all() estimates each frame's current from the bytes it
+# sends, and scales any frame over POWER_LIMIT_MA down evenly to fit, so a
+# bright scene dims a little instead of browning out the supply (which
+# can freeze the Pico). Frames under the limit are untouched. Set it to
+# what the LED supply can give, less some headroom; 0 turns it off.
+# MA_PER_CHANNEL is one color channel's current at full brightness: 20 is
+# the WS2812 datasheet's worst case, so estimates run high. By it, the
+# static jack-o'-lanterns draw ~5A and have always run fine, so the limit
+# starts there.
+POWER_LIMIT_MA = 5000
+MA_PER_CHANNEL = 20
+last_ma = 0          # the last frame's estimated current, after limiting
+
 _table = None
 
 
@@ -186,6 +199,25 @@ def _render(src: ptr8, dst: ptr8, err: ptr8, n: int, table: ptr16,
         i += 3
 
 
+@micropython.viper
+def _sum(buf: ptr8, n: int) -> int:
+    total = 0
+    i = 0
+    while i < n:
+        total += buf[i]
+        i += 1
+    return total
+
+
+@micropython.viper
+def _scale(buf: ptr8, n: int, k: int):
+    """buf[i] *= k / 256."""
+    i = 0
+    while i < n:
+        buf[i] = (buf[i] * k) >> 8
+        i += 1
+
+
 _out_bufs = {}
 _err_bufs = {}
 
@@ -202,9 +234,12 @@ def show_all(strips):
     The rendering runs as viper code on the raw bytes. Going through
     strip[i] instead (neopixel is plain Python on the Pico) took ~77ms a
     frame, capping every scene at ~12 FPS whenever the lights were dimmed.
+
+    Last, frames over POWER_LIMIT_MA are scaled down to fit.
     """
-    global _table
-    if BRIGHTNESS >= 1.0 and GAMMA == 1.0:
+    global _table, last_ma
+    plain = BRIGHTNESS >= 1.0 and GAMMA == 1.0
+    if plain and not POWER_LIMIT_MA:
         for strip in strips:
             strip.write()
         return
@@ -217,6 +252,8 @@ def show_all(strips):
     while s > 1:
         s >>= 1
         step_shift += 1
+    outs = []
+    total = 0
     for strip in strips:
         buf = strip.buf
         key = id(strip)
@@ -226,8 +263,24 @@ def show_all(strips):
             # Random starting leftovers so neighbouring pixels don't all
             # step up on the same frame.
             _err_bufs[key] = bytearray(random.getrandbits(8) for _ in range(len(buf)))
-        _render(buf, out, _err_bufs[key], len(buf), _table,
-                1 if DITHER else 0, DITHER_FLOOR, step_shift)
+        if plain:
+            out[:] = buf
+        else:
+            _render(buf, out, _err_bufs[key], len(buf), _table,
+                    1 if DITHER else 0, DITHER_FLOOR, step_shift)
+        total += _sum(out, len(out))
+        outs.append(out)
+
+    ma = total * MA_PER_CHANNEL // 255
+    if POWER_LIMIT_MA and ma > POWER_LIMIT_MA:
+        k = POWER_LIMIT_MA * 256 // ma
+        for out in outs:
+            _scale(out, len(out), k)
+        ma = ma * k // 256
+    last_ma = ma
+
+    for strip, out in zip(strips, outs):
+        buf = strip.buf
         strip.buf = out
         try:
             strip.write()
