@@ -31,13 +31,13 @@ FLAME_COLORS = [
     (1.0, (255, 210, 110)),    # warm white, the heart of it
 ]
 WAX_COLOR = (255, 175, 95)
-WAX_GLOW = (0.04, 0.22)        # wax brightness at its foot and at its top
+WAX_GLOW = (0.01, 0.06)        # wax brightness at its foot and at its top
 HALO_COLOR = (255, 110, 25)
 HALO_GLOW = 0.07               # halo brightness around the flame...
 HALO_RADIUS = 3.5              # ...fading out over this many columns
 HALO_TALL = 1.3                # stretched upward by this much
 
-FLAME_LENGTH = 1.7             # rows
+FLAME_LENGTH = 2.0             # rows
 WICK_GAP = 0.15                # rows between the wax and the flame
 FLAME_HEAT = 1.2               # heat at the flame's heart (1 = just warm white)
 BREATH = 0.1                   # slow swell and fade of each flame...
