@@ -24,16 +24,25 @@ EASE_S = 15.0                  # seconds to settle most of the way to a new look
 CLOUD_WIDTH = 6.0              # columns across a low cloud...
 CLOUD_HEIGHT = 2.5             # ...and rows
 CLOUD_EDGE = 0.25              # how soft their edges are (0-1)
-CLOUD_SHADE = 0.75             # thicker parts of a cloud this much darker...
-CLOUD_TEXTURE = 2.4            # ...with this much more contrast in the lumps
+CLOUD_SHADE = 0.4              # thicker parts of a cloud this much darker...
+CLOUD_TEXTURE = 1.5            # ...with this much more contrast in the lumps
 CLOUD_LOW_DOWN = 6             # low cloud thicker toward the horizon (per row)
 FRONT_SHADE = 0.8              # low cloud this bright...
 BACK_SHADE = 1.15              # ...and the higher cloud behind it this bright
 BACK_SIZE = 1.8                # higher clouds are this much bigger...
 BACK_SPEED = 0.5               # ...and move this much slower
-CLOUD_DRIFT = 0.14             # columns/sec per m/s of wind across the mantle, up at the clouds
+CLOUD_DRIFT = 0.2              # columns/sec per m/s of wind across the mantle, up at the clouds
 CLOUD_CREEP = 0.04             # columns/sec they drift even on a still day
 CLOUD_CHANGE = 0.03            # how quickly they change shape
+
+# Scud: ragged, darker fragments racing along under a thick overcast.
+SCUD_COVER = 0.4               # how much of the sky they cover under full low cloud...
+SCUD_RAIN = 0.2                # ...plus this much more in steady rain
+SCUD_WIDTH = 4.0               # columns across a fragment...
+SCUD_HEIGHT = 1.8              # ...and rows
+SCUD_EDGE = 0.1                # firmer edges than the clouds above (0-1)
+SCUD_SHADE = 0.28              # this bright, next to the cloud above
+SCUD_SPEED = 1.6               # this much faster than the cloud above
 
 BAND_WIDTH = 8.0               # columns across rolling bands of light and shade...
 BAND_DEPTH = 0.45              # ...this much lighter or darker...
@@ -222,6 +231,12 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
     break_row = p[27]
     break_h = p[28]
     texture = p[29]
+    scud_thresh = p[30]
+    ssx = p[31]
+    ssy = p[32]
+    scx = p[33]
+    scud_soft = p[34]
+    scud_k = p[35]
     top = 255 * 16
     o = 0
     i = 0
@@ -242,14 +257,16 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
             # The bands run on a diagonal.
             band = fx[(col + row) * 2]
             gap = (fx[col * 2 + 1] * across) >> 8
-            # The higher layer, behind.
-            n = int(noise(col * bsx + bcx, row * bsy + cy + 50000, perm))
-            db = ((n - back_thresh) * soft) >> 8
-            if db < 0:
-                db = 0
-            elif db > 256:
-                db = 256
-            db = (db * (256 - gap)) >> 8
+            # The higher layer, behind (none to work out if there's none).
+            db = 0
+            if back_thresh < 256:
+                n = int(noise(col * bsx + bcx, row * bsy + cy + 50000, perm))
+                db = ((n - back_thresh) * soft) >> 8
+                if db < 0:
+                    db = 0
+                elif db > 256:
+                    db = 256
+                db = (db * (256 - gap)) >> 8
             f = (band * back_k) >> 8
             r = br + (((((cr * f) >> 8) - br) * db) >> 8)
             g = bg + (((((cg * f) >> 8) - bg) * db) >> 8)
@@ -274,6 +291,19 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
             r += ((((cr * f) >> 8) - r) * d) >> 8
             g += ((((cg * f) >> 8) - g) * d) >> 8
             b += ((((cb * f) >> 8) - b) * d) >> 8
+            # Scud, under it all.
+            if scud_thresh < 256:
+                n = int(noise(col * ssx + scx, row * ssy + cy + 70000, perm))
+                ds = ((n - scud_thresh) * scud_soft) >> 8
+                if ds > 0:
+                    if ds > 256:
+                        ds = 256
+                    ds = (ds * (256 - gap)) >> 8
+                    f = (band * scud_k) >> 8
+                    r += ((((cr * f) >> 8) - r) * ds) >> 8
+                    g += ((((cg * f) >> 8) - g) * ds) >> 8
+                    b += ((((cb * f) >> 8) - b) * ds) >> 8
+                    d = 256 - (((256 - d) * (256 - ds)) >> 8)
             if gap > 0:
                 a = (gap * up) >> 8
                 r += (ur * a) >> 8
@@ -564,11 +594,13 @@ def live_weather(strips, inbox=None):
                     + [q8(CLOUD_SHADE), 0, q8(1 / (CLOUD_WIDTH * BACK_SIZE)),
                        q8(1 / (CLOUD_HEIGHT * BACK_SIZE)), 0, CLOUD_LOW_DOWN,
                        q8(FRONT_SHADE), q8(BACK_SHADE), 0, 0, 0,
-                       q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2), q8(CLOUD_TEXTURE)])
+                       q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2), q8(CLOUD_TEXTURE),
+                       0, q8(1 / SCUD_WIDTH), q8(1 / SCUD_HEIGHT), 0,
+                       q8(1 / SCUD_EDGE), q8(SCUD_SHADE)])
     fx = array.array("i", [0] * ((COLS + ROWS) * 2))
     fx_p = array.array("i", [COLS, q8(1 / BAND_WIDTH), 0, 0, q8(BAND_DEPTH),
                              q8(1 / BREAK_WIDTH), 0, 0, 0, ROWS])
-    cloud_at = back_at = change_at = twinkle_at = 0.0
+    cloud_at = back_at = scud_at = change_at = twinkle_at = 0.0
     band_at = band_change_at = break_at = break_change_at = 0.0
 
     drops = array.array("i", [0] * (RAIN_MOST * DROP))
@@ -626,6 +658,7 @@ def live_weather(strips, inbox=None):
         speed = CLOUD_DRIFT * cloud_wind + (CLOUD_CREEP if cloud_wind >= 0 else -CLOUD_CREEP)
         cloud_at = drift(cloud_at, -speed / CLOUD_WIDTH, dt)
         back_at = drift(back_at, -speed * BACK_SPEED / (CLOUD_WIDTH * BACK_SIZE), dt)
+        scud_at = drift(scud_at, -speed * SCUD_SPEED / SCUD_WIDTH, dt)
         band_at = drift(band_at, -speed * BAND_SPEED / BAND_WIDTH, dt)
         break_at = drift(break_at, -speed * BACK_SPEED / BREAK_WIDTH, dt)
         change_at = drift(change_at, CLOUD_CHANGE, dt)
@@ -638,6 +671,10 @@ def live_weather(strips, inbox=None):
         p[6] = int(270.5 - 330 * look.get("layers", 0))
         p[17] = int(270.5 - 330 * look.get("layers", 1))
         p[20] = q8(back_at)
+        low = look.get("layers", 0)
+        scud = SCUD_COVER * min(1.0, max(0.0, (low - 0.7) / 0.3)) + SCUD_RAIN * min(1.0, look.get("rain") / 3)
+        p[30] = int(270.5 - 330 * scud) if scud > 0.01 else 999
+        p[33] = q8(scud_at)
         for ch in range(3):
             c = look.get("cloud_color", ch)
             p[8 + ch] = int(LIGHT * (c + (FLASH_COLOR[ch] - c) * flash) + 0.5)
