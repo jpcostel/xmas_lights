@@ -129,6 +129,16 @@ SCENES = {
         "web_label": "🌾 Harvest Glow",
         "cmd": "import harvest; harvest.harvest_glow(strips)",
     },
+    "wheat_field": {
+        "name": "Wheat Field",
+        "web_label": "🌾 Wheat Field",
+        "cmd": "import wheat; wheat.wheat_field(strips)",
+    },
+    "candlelight": {
+        "name": "Candlelight",
+        "web_label": "🕯️ Candlelight",
+        "cmd": "import candles; candles.candlelight(strips)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
