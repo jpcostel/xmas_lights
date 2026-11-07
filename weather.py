@@ -24,10 +24,10 @@ EASE_S = 15.0                  # seconds to settle most of the way to a new look
 CLOUD_WIDTH = 6.0              # columns across a low cloud...
 CLOUD_HEIGHT = 2.5             # ...and rows
 CLOUD_EDGE = 0.25              # how soft their edges are (0-1)
-CLOUD_SHADE = 0.4              # thicker parts of a cloud this much darker...
+CLOUD_SHADE = 0.3              # thicker parts of a cloud this much darker...
 CLOUD_TEXTURE = 1.5            # ...with this much more contrast in the lumps
 CLOUD_LOW_DOWN = 6             # low cloud thicker toward the horizon (per row)
-FRONT_SHADE = 0.8              # low cloud this bright...
+FRONT_SHADE = 1.0              # low cloud this bright...
 BACK_SHADE = 1.15              # ...and the higher cloud behind it this bright
 BACK_SIZE = 1.8                # higher clouds are this much bigger...
 BACK_SPEED = 0.5               # ...and move this much slower
@@ -40,8 +40,9 @@ SCUD_COVER = 0.4               # how much of the sky they cover under full low c
 SCUD_RAIN = 0.2                # ...plus this much more in steady rain
 SCUD_WIDTH = 4.0               # columns across a fragment...
 SCUD_HEIGHT = 1.8              # ...and rows
-SCUD_EDGE = 0.1                # firmer edges than the clouds above (0-1)
-SCUD_SHADE = 0.28              # this bright, next to the cloud above
+SCUD_EDGE = 0.07               # firmer edges than the clouds above (0-1)
+SCUD_SHADE = 0.1               # this bright, next to the cloud above
+SCUD_RIM = 0.4                 # the cloud this much brighter just around a fragment
 SCUD_SPEED = 1.6               # this much faster than the cloud above
 
 BAND_WIDTH = 8.0               # columns across rolling bands of light and shade...
@@ -237,6 +238,7 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
     scx = p[33]
     scud_soft = p[34]
     scud_k = p[35]
+    rim = p[36]
     top = 255 * 16
     o = 0
     i = 0
@@ -295,6 +297,14 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
             if scud_thresh < 256:
                 n = int(noise(col * ssx + scx, row * ssy + cy + 70000, perm))
                 ds = ((n - scud_thresh) * scud_soft) >> 8
+                # A brighter rim just outside each fragment's edge.
+                e = ds + 256
+                if e > 0:
+                    if e < 256:
+                        a = (((((e * (256 - e)) >> 6) * rim) >> 8) * d) >> 8
+                        r += (cr * a) >> 8
+                        g += (cg * a) >> 8
+                        b += (cb * a) >> 8
                 if ds > 0:
                     if ds > 256:
                         ds = 256
@@ -596,7 +606,7 @@ def live_weather(strips, inbox=None):
                        q8(FRONT_SHADE), q8(BACK_SHADE), 0, 0, 0,
                        q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2), q8(CLOUD_TEXTURE),
                        0, q8(1 / SCUD_WIDTH), q8(1 / SCUD_HEIGHT), 0,
-                       q8(1 / SCUD_EDGE), q8(SCUD_SHADE)])
+                       q8(1 / SCUD_EDGE), q8(SCUD_SHADE), q8(SCUD_RIM)])
     fx = array.array("i", [0] * ((COLS + ROWS) * 2))
     fx_p = array.array("i", [COLS, q8(1 / BAND_WIDTH), 0, 0, q8(BAND_DEPTH),
                              q8(1 / BREAK_WIDTH), 0, 0, 0, ROWS])
