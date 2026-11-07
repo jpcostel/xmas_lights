@@ -68,7 +68,8 @@ INPUTS = {
     "hour": "local time",
 }
 
-CALM = {"rain": 0.0, "snow": 0.0, "cloud": 20.0, "cloud_low": 20.0, "cloud_high": 10.0, "wind_speed": 1.0, "wind_dir": 270.0,
+CALM = {"rain": 0.0, "snow": 0.0, "cloud": 20.0, "cloud_low": 20.0, "cloud_high": 10.0,
+        "cloud_wind_speed": 4.0, "cloud_wind_dir": 270.0, "wind_speed": 1.0, "wind_dir": 270.0,
         "gust": 2.0, "visibility": 20000.0, "code": 1, "temperature": 10.0}
 
 API = "https://api.open-meteo.com/v1/forecast"
@@ -76,6 +77,8 @@ NOW_VARS = ("temperature_2m,precipitation,rain,showers,snowfall,weather_code,clo
             "cloud_cover_low,cloud_cover_mid,cloud_cover_high,"
             "wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility")
 STEP_VARS = "precipitation,snowfall,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility"
+# The wind about 1.5 km up, where low clouds are: it moves them.
+HOUR_VARS = "wind_speed_850hPa,wind_direction_850hPa"
 
 
 # ============================================================
@@ -86,6 +89,7 @@ def fetch():
     query = urllib.parse.urlencode({
         "latitude": LATITUDE, "longitude": LONGITUDE, "current": NOW_VARS,
         "minutely_15": STEP_VARS, "past_minutely_15": 2, "forecast_minutely_15": 4,
+        "hourly": HOUR_VARS, "past_hours": 1, "forecast_hours": 2,
         "timezone": "UTC", "wind_speed_unit": "ms",
     })
     with urllib.request.urlopen(f"{API}?{query}", timeout=20) as reply:
@@ -143,6 +147,22 @@ def observe(data, now):
             code = steps["weather_code"][i if f < 0.5 else i + 1]
             if code is not None:
                 obs["code"] = code
+            break
+
+    # Cloud-level wind, blended between the hours either side of now.
+    # Without it, clouds go the surface wind's way at twice its speed.
+    obs["cloud_wind_speed"] = 2 * obs["wind_speed"]
+    obs["cloud_wind_dir"] = obs["wind_dir"]
+    hours = data.get("hourly") or {}
+    times = [datetime.fromisoformat(t).replace(tzinfo=timezone.utc) for t in hours.get("time", [])]
+    for i in range(len(times) - 1):
+        if times[i] <= now < times[i + 1]:
+            f = (now - times[i]) / (times[i + 1] - times[i])
+            sa, sb = hours["wind_speed_850hPa"][i], hours["wind_speed_850hPa"][i + 1]
+            da, db = hours["wind_direction_850hPa"][i], hours["wind_direction_850hPa"][i + 1]
+            if None not in (sa, sb, da, db):
+                obs["cloud_wind_speed"] = sa + (sb - sa) * f
+                obs["cloud_wind_dir"] = _blend_angle(da, db, f)
             break
     return obs
 
@@ -291,11 +311,13 @@ def look(obs, when):
     breaks *= 0 if storm else 1 - min(1.0, (rain + snow * 3) / 1.5)
     sunlight = tuple(c * BREAK_LIGHT for c in _mix(SUN_GOLD, SUN_WHITE, _smooth(2, 20, sun_alt)))
 
-    # Wind across the mantle (+ to the right) and toward you.
+    # Wind across the mantle (+ to the right) and toward you, at the
+    # ground and up where the clouds are.
     heading = math.radians(obs["wind_dir"] + 180)
     right = math.radians(FACING + 90)
     across = obs["wind_speed"] * math.cos(heading - right)
     toward = obs["wind_speed"] * math.cos(heading - math.radians(FACING + 180))
+    cloud_across = obs["cloud_wind_speed"] * math.cos(math.radians(obs["cloud_wind_dir"] + 180) - right)
 
     fog = 1 - _smooth(200, 5000, obs["visibility"])
     if code in (45, 48):
@@ -313,6 +335,7 @@ def look(obs, when):
         "rain": rain, "snow": snow,
         "rain_color": _mix(RAIN_NIGHT, RAIN_DAY, day), "snow_color": _mix(SNOW_NIGHT, SNOW_DAY, day),
         "wind": (across, toward), "gust": obs["gust"] - obs["wind_speed"],
+        "cloud_wind": cloud_across,
         "storm": 1 if storm else 0, "fog": fog, "temperature": obs["temperature"],
         "sun": place(sun_alt, sun_az) + (day,),
         "moon": place(moon_alt, moon_az) + (moon_lit if waxing else -moon_lit,),
@@ -401,6 +424,10 @@ def main():
             # An overall cover sets both layers unless they're given too.
             inputs["cloud_low"] = float(overrides.get("cloud_low", inputs["cloud"]))
             inputs["cloud_high"] = float(overrides.get("cloud_high", 0.6 * inputs["cloud"]))
+        if "wind_speed" in overrides or "wind_dir" in overrides:
+            # Previewing a wind moves the clouds the same way.
+            inputs["cloud_wind_speed"] = 2 * inputs["wind_speed"]
+            inputs["cloud_wind_dir"] = inputs["wind_dir"]
         params = look(inputs, when)
 
         # Only send to the scene once it answers: anything else running

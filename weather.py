@@ -24,17 +24,18 @@ EASE_S = 15.0                  # seconds to settle most of the way to a new look
 CLOUD_WIDTH = 6.0              # columns across a low cloud...
 CLOUD_HEIGHT = 2.5             # ...and rows
 CLOUD_EDGE = 0.25              # how soft their edges are (0-1)
-CLOUD_SHADE = 0.45             # thicker parts of a cloud this much darker
+CLOUD_SHADE = 0.65             # thicker parts of a cloud this much darker...
+CLOUD_TEXTURE = 2.0            # ...with this much more contrast in the lumps
 CLOUD_LOW_DOWN = 6             # low cloud thicker toward the horizon (per row)
 FRONT_SHADE = 0.8              # low cloud this bright...
 BACK_SHADE = 1.15              # ...and the higher cloud behind it this bright
 BACK_SIZE = 1.8                # higher clouds are this much bigger...
 BACK_SPEED = 0.5               # ...and move this much slower
-CLOUD_DRIFT = 0.08             # columns/sec per m/s of wind across the mantle
+CLOUD_DRIFT = 0.1              # columns/sec per m/s of wind across the mantle, up at the clouds
 CLOUD_CREEP = 0.04             # columns/sec they drift even on a still day
 CLOUD_CHANGE = 0.03            # how quickly they change shape
 
-BAND_WIDTH = 10.0              # columns across rolling bands of light and shade...
+BAND_WIDTH = 8.0               # columns across rolling bands of light and shade...
 BAND_DEPTH = 0.45              # ...this much lighter or darker...
 BAND_SPEED = 0.7               # ...moving this fast next to the low cloud
 BAND_CHANGE = 0.04
@@ -77,7 +78,7 @@ CLEAR_NIGHT = {
     "top": [0.0, 0.0, 0.0], "bottom": [0.0, 0.0, 0.0],
     "cloud": [0.1], "layers": [0.1, 0.1], "cloud_color": [0.0, 0.0, 0.0], "stars": [1.0],
     "breaks": [0.0], "sunlight": [0.0, 0.0, 0.0],
-    "rain": [0.0], "snow": [0.0], "storm": [0.0], "wind": [0.0, 0.0],
+    "rain": [0.0], "snow": [0.0], "storm": [0.0], "wind": [0.0, 0.0], "cloud_wind": [0.0],
     "rain_color": [70.0, 85.0, 120.0], "snow_color": [110.0, 110.0, 125.0],
 }
 
@@ -220,6 +221,7 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
     ub = p[26]
     break_row = p[27]
     break_h = p[28]
+    texture = p[29]
     top = 255 * 16
     o = 0
     i = 0
@@ -255,13 +257,20 @@ def _sky(light: ptr16, perm, p: ptr32, sky: ptr16, stars: ptr8, fx: ptr32):
             # The low layer in front, darker where it's thicker.
             n1 = int(noise(col * sx + cx, row * sy + cy, perm))
             n2 = int(noise(col * sx * 2 + cx * 2 + 30000, row * sy * 2 + cy + 20000, perm))
-            d = ((((n1 * 180 + n2 * 76) >> 8) - front_thresh) * soft) >> 8
+            n = (n1 * 180 + n2 * 76) >> 8
+            d = ((n - front_thresh) * soft) >> 8
             if d < 0:
                 d = 0
             elif d > 256:
                 d = 256
             d = (d * (256 - gap)) >> 8
-            f = (((band * front_k) >> 8) * (256 - ((shade * n1) >> 8))) >> 8
+            # Lumps: the same noise, its contrast stretched.
+            n = 128 + (((n - 128) * texture) >> 8)
+            if n < 0:
+                n = 0
+            elif n > 255:
+                n = 255
+            f = (((band * front_k) >> 8) * (256 - ((shade * n) >> 8))) >> 8
             r += ((((cr * f) >> 8) - r) * d) >> 8
             g += ((((cg * f) >> 8) - g) * d) >> 8
             b += ((((cb * f) >> 8) - b) * d) >> 8
@@ -555,7 +564,7 @@ def live_weather(strips, inbox=None):
                     + [q8(CLOUD_SHADE), 0, q8(1 / (CLOUD_WIDTH * BACK_SIZE)),
                        q8(1 / (CLOUD_HEIGHT * BACK_SIZE)), 0, CLOUD_LOW_DOWN,
                        q8(FRONT_SHADE), q8(BACK_SHADE), 0, 0, 0,
-                       q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2)])
+                       q8(BREAK_ROW), q8(1 / BREAK_HEIGHT ** 2), q8(CLOUD_TEXTURE)])
     fx = array.array("i", [0] * ((COLS + ROWS) * 2))
     fx_p = array.array("i", [COLS, q8(1 / BAND_WIDTH), 0, 0, q8(BAND_DEPTH),
                              q8(1 / BREAK_WIDTH), 0, 0, 0, ROWS])
@@ -613,7 +622,8 @@ def live_weather(strips, inbox=None):
 
         # Clouds drift with the wind across the mantle, the higher ones
         # slower; the bands of light and shade, and the breaks, go with them.
-        speed = CLOUD_DRIFT * wind + (CLOUD_CREEP if wind >= 0 else -CLOUD_CREEP)
+        cloud_wind = look.get("cloud_wind")
+        speed = CLOUD_DRIFT * cloud_wind + (CLOUD_CREEP if cloud_wind >= 0 else -CLOUD_CREEP)
         cloud_at = drift(cloud_at, -speed / CLOUD_WIDTH, dt)
         back_at = drift(back_at, -speed * BACK_SPEED / (CLOUD_WIDTH * BACK_SIZE), dt)
         band_at = drift(band_at, -speed * BAND_SPEED / BAND_WIDTH, dt)
