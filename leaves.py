@@ -2,6 +2,7 @@ import math
 import micropython
 import random
 import utime
+import wiring
 from wiring import show_all, pixel_map, restore, true_color
 from grid import ROWS, COLS
 
@@ -41,6 +42,10 @@ SETTLE_SPEED = 2.0             # rows/sec a resting leaf slides down
 LAND_BLEND_MS = 400            # ease from fluttering to resting brightness
 REST_BRIGHTNESS = 0.93
 
+LEAF_RADIUS = 1.0              # LEDs closer than this (in LED spacings) to a
+                               # leaf share its light; smaller = tighter leaves
+                               # (keep above 0.75, or a leaf can fall between)
+
 FRAME_MS = 16                  # ~60 FPS
 MAX_STEP_MS = 100              # longest single step if a frame runs late
 
@@ -50,41 +55,50 @@ MAX_STEP_MS = 100              # longest single step if a frame runs late
 # ============================================================
 
 @micropython.native
-def _draw_leaf(pixels, x, y, r, g, b):
-    """Add a leaf at a fractional grid position, blended across the up to
-    four LEDs around it so it glides instead of hopping.
+def _draw_leaf(pixels, x, y, r, g, b, radius, inv_gamma):
+    """Light the LEDs near a leaf by how close each one is to it.
 
-    Plain bilinear blending dims a leaf that sits between LEDs, and
-    scaling it back up to full brightness makes it swell to a 2x2 block;
-    dividing by the square root of the peak weight is the middle ground.
-    The peak ignores the grid edges, so a leaf half off the edge fades.
+    The leaf is a point that moves anywhere on the grid, not just from LED
+    to LED. Every LED within `radius` of it gets a share of its light that
+    falls smoothly from full right at the leaf to nothing at `radius`:
+    (1 - d^2/radius^2)^2, which has no corners, so motion never jerks.
+
+    The shares are made to add up to the leaf's full light in real light
+    output, then raised to 1/gamma so show_all's gamma correction turns
+    them back. The leaf gives off the same light wherever it is, and
+    dithering lets the faint glow on the LEDs it's heading toward rise in
+    fine steps. LEDs past the grid's edge still take their share, so a
+    leaf fades as it drifts off.
     """
-    x0 = int(math.floor(x))
-    y0 = int(math.floor(y))
-    fx = x - x0
-    fy = y - y0
-    peak = (fx if fx > 0.5 else 1 - fx) * (fy if fy > 0.5 else 1 - fy)
-    gain = 1 / math.sqrt(peak)
-    for dy in (0, 1):
-        row = y0 + dy
-        if row < 0 or row >= ROWS:
-            continue
-        wy = fy if dy else 1 - fy
-        line = pixels[row]
-        for dx in (0, 1):
-            col = x0 + dx
-            if col < 0 or col >= COLS:
+    r2 = radius * radius
+    x_lo = int(math.floor(x - radius))
+    y_lo = int(math.floor(y - radius))
+    span = int(math.ceil(2 * radius)) + 1
+    total = 0.0
+    near = []
+    for row in range(y_lo, y_lo + span + 1):
+        oy = row - y
+        for col in range(x_lo, x_lo + span + 1):
+            ox = col - x
+            d2 = ox * ox + oy * oy
+            if d2 >= r2:
                 continue
-            w = (fx if dx else 1 - fx) * wy * gain
-            if w <= 0:
-                continue
-            buf, ro, go, bo = line[col]
-            v = buf[ro] + int(r * w)
-            buf[ro] = v if v < 255 else 255
-            v = buf[go] + int(g * w)
-            buf[go] = v if v < 255 else 255
-            v = buf[bo] + int(b * w)
-            buf[bo] = v if v < 255 else 255
+            f = 1.0 - d2 / r2
+            f *= f
+            total += f
+            if 0 <= row < ROWS and 0 <= col < COLS:
+                near.append((row, col, f))
+    if total <= 0.0:
+        return
+    for row, col, f in near:
+        k = (f / total) ** inv_gamma
+        buf, ro, go, bo = pixels[row][col]
+        v = buf[ro] + int(r * k)
+        buf[ro] = v if v < 255 else 255
+        v = buf[go] + int(g * k)
+        buf[go] = v if v < 255 else 255
+        v = buf[bo] + int(b * k)
+        buf[bo] = v if v < 255 else 255
 
 
 # ============================================================
@@ -155,6 +169,8 @@ def falling_leaves(strips):
     pixels = pixel_map(strips)
     blank = [bytes(len(s.buf)) for s in strips]
     colors = [true_color(c) for c in LEAF_COLORS]
+    inv_gamma = 1 / wiring.GAMMA
+    radius = LEAF_RADIUS
 
     falling = []
     resting = []
@@ -225,7 +241,7 @@ def falling_leaves(strips):
         for leaf in resting:
             b = leaf.brightness(frame_start)
             c = leaf.color
-            _draw_leaf(pixels, leaf.x, leaf.y, c[0] * b, c[1] * b, c[2] * b)
+            _draw_leaf(pixels, leaf.x, leaf.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
 
         # ----------------------------------------------------
         # FALLING LEAVES
@@ -245,11 +261,11 @@ def falling_leaves(strips):
                 resting.append(landed)
                 stack[col] += 1
                 # Draw it this frame too, or it blinks out as it lands.
-                _draw_leaf(pixels, x, landed.y, c[0] * b, c[1] * b, c[2] * b)
+                _draw_leaf(pixels, x, landed.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
                 continue
             if leaf.y < -1.0 or x < -2.0 or x > COLS + 1.0:
                 continue
-            _draw_leaf(pixels, x, leaf.y, c[0] * b, c[1] * b, c[2] * b)
+            _draw_leaf(pixels, x, leaf.y, c[0] * b, c[1] * b, c[2] * b, radius, inv_gamma)
             still.append(leaf)
         falling = still
 
