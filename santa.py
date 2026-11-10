@@ -63,12 +63,12 @@ GLYPHS = {
     "H": ("X.X", "X.X", "XXX", "X.X", "X.X"),
     "O": ("XXX", "X.X", "X.X", "X.X", "XXX"),
 }
-HOS = [(0, (200, 0, 0)), (9, (170, 170, 170)), (18, (200, 0, 0))]   # left column, color
-TEXT_TOP = 6                   # the letters' top row
+# Each HO: left column, top row (stepping down from the top left), color.
+HOS = [(0, 7, (200, 0, 0)), (9, 6, (170, 170, 170)), (18, 5, (200, 0, 0))]
 HO_EVERY_S = (20.0, 45.0)
-HO_S = 0.6                     # each HO on its own...
-FLASH_ON_S = 0.35              # ...then all three blink together...
-FLASH_OFF_S = 0.25
+HO_S = 1.0                     # each HO on its own...
+FLASH_ON_S = 0.6               # ...then all three blink together...
+FLASH_OFF_S = 0.4
 FLASHES = 3
 SCROLL_GAP = 3                 # ...and scroll off, the face this far behind...
 SCROLL_SPEED = 14.0            # ...at this many columns/sec
@@ -80,14 +80,15 @@ FRAME_MS = 16                  # ~60 FPS
 # HO HO HO
 # ============================================================
 
-def _word(left, color):
-    """A light buffer with one HO in it, its left edge at column left."""
+def _word(left, top, color):
+    """A light buffer with one HO in it, its top left corner at column
+    left, row top."""
     out = array.array("H", [0] * (ROWS * COLS * 3))
     c = to_light(color)
     x = left
     for letter in "HO":
         for i, line in enumerate(GLYPHS[letter]):
-            row = TEXT_TOP - i
+            row = top - i
             for j, bit in enumerate(line):
                 if bit == "X":
                     o = 3 * (row * COLS + x + j)
@@ -112,7 +113,7 @@ class HoHoHo:
     """When it's time, what the screen shows instead of Santa's face."""
 
     def __init__(self, t):
-        self.words = [_word(x, color) for x, color in HOS]
+        self.words = [_word(x, top, color) for x, top, color in HOS]
         self.all = array.array("H", self.words[0])
         for w in self.words[1:]:
             for i in range(len(w)):
