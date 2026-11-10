@@ -145,6 +145,26 @@ SCENES = {
         "web_label": "🌦️ Live Weather",
         "cmd": "import weather; weather.live_weather(strips)",
     },
+    "santas_elf": {
+        "name": "Santas Elf",
+        "web_label": "🧝 Santa's Elf",
+        "cmd": "import elf; elf.santas_elf(strips)",
+    },
+    "santa": {
+        "name": "Santa",
+        "web_label": "🎅 Santa",
+        "cmd": "import santa; santa.santa(strips)",
+    },
+    "xmas_tree": {
+        "name": "Christmas Tree",
+        "web_label": "🎄 Christmas Tree",
+        "cmd": "import tree; tree.christmas_tree(strips)",
+    },
+    "xmas_tree_colors": {
+        "name": "Colorful Christmas Tree",
+        "web_label": "🎄 Colorful Christmas Tree",
+        "cmd": "import tree; tree.christmas_tree(strips, True)",
+    },
 }
 
 DEFAULT_SCENE = "snow"
