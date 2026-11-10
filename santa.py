@@ -1,4 +1,5 @@
 import array
+import math
 import random
 import utime
 from canvas import Canvas, to_light
@@ -9,13 +10,14 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # ============================================================
 # CONFIGURATION
 # ============================================================
-# Santa at the North Pole. It starts wide: Santa head to boots, an elf
-# at his side and a snowman on the other. Then it
-# zooms in on his face, so close the bottom of his beard is cut off,
-# leaving room for big eyes that look around and blink. Partway
-# through he says HO HO HO: each HO shows on its own in turn, then all
-# three blink together and scroll off to the left, his face scrolling
-# back in behind them. Then it zooms back out, and round again.
+# Santa in his sleigh. It starts wide, from the side: Santa sitting in
+# his sleigh with Rudolph out in front. As it zooms in on his face he turns his head to
+# smile out at you, and the close-up is so close the bottom of his
+# beard is cut off, leaving room for big eyes that look around and
+# blink. Partway through he says HO HO HO: each HO shows on its own in
+# turn, then all three blink together and scroll off to the left, his
+# face scrolling back in behind them. Then he turns back to the road as
+# it zooms back out, and round again.
 #
 # Positions are in "close-up" units: at full zoom one unit is one LED,
 # x = column and y = row (0 = bottom), so the face's features land on
@@ -36,17 +38,14 @@ BEARD = (120, 120, 120)
 MOUSTACHE = (200, 200, 200)
 FUR = (170, 170, 165)
 RED = (170, 0, 0)
-BELT = (14, 10, 6)
-BUCKLE = (200, 140, 0)
+SLEIGH = (150, 0, 10)
+GOLD = (200, 140, 0)
 MITTENS = (0, 60, 12)
-BOOTS = (22, 12, 6)
-SNOW = (150, 150, 160)
 GROUND = (60, 60, 72)
+REINDEER = (95, 48, 15)
+ANTLERS = (150, 110, 60)
+RUDOLPH = (255, 0, 0)          # his nose
 COAL = (12, 12, 14)
-CARROT = (220, 70, 0)
-SCARF = (0, 110, 20)
-ELF_GREEN = (0, 120, 15)
-ELF_SHOES = (0, 50, 10)
 
 # The close-up, row by row: hat brim 7, eyes 5-6, nose 3-4, moustache 2,
 # mouth 1. Eyes: 3 LEDs wide with a pupil one LED wide that looks left,
@@ -57,75 +56,66 @@ PUPIL_SIZE = (0.55, 1.05)
 LOOKS = [(0.0, 0.0), (0.0, 0.0), (-1.0, 0.0), (1.0, 0.0)]   # pupil moves a whole LED
 CRISP = 0.45                   # edge softness of the small features
 
-# (kind, color, where), drawn in this order, back to front: ellipses
-# ("ellipse", or "crisp" for small features) are (x, y, rx, ry[, alpha]),
-# polygons ("poly") their corners.
+# The face's features sit on a rounded head: those with a depth (how
+# far out from the head's middle they are) slide round and squeeze as
+# he turns his head, and go out of sight round the back.
+HEAD_X = 12.0
+PROFILE = 80.0                 # degrees his head is turned toward Rudolph
+FACE_DEPTH = 6.4
+BEARD_DEPTH = 3.0
+NOSE_DEPTH = 7.4
+
+# (kind, color, where[, depth]), drawn in this order, back to front:
+# ellipses ("ellipse", or "crisp" for small features) are
+# (x, y, rx, ry[, alpha]), polygons ("poly") their corners.
 WORLD = [
-    ("poly", GROUND, [(-70, -16.6), (94, -16.6), (94, -40), (-70, -40)]),
-    # An elf at Santa's side: shoes, red legs, green tunic with a belt,
-    # pointy ears and a pointed hat with a pom-pom.
-    ("ellipse", ELF_SHOES, (-13.8, -16.0, 1.6, 0.7)),
-    ("ellipse", ELF_SHOES, (-10.2, -16.0, 1.6, 0.7)),
-    ("poly", RED, [(-14.0, -15.6), (-12.6, -15.6), (-12.6, -12.4), (-14.0, -12.4)]),
-    ("poly", RED, [(-11.4, -15.6), (-10.0, -15.6), (-10.0, -12.4), (-11.4, -12.4)]),
-    ("ellipse", ELF_GREEN, (-15.4, -8.6, 1.1, 2.6)),
-    ("ellipse", ELF_GREEN, (-8.6, -8.6, 1.1, 2.6)),
-    ("poly", ELF_GREEN, [(-15.4, -12.6), (-8.6, -12.6), (-9.8, -6.2), (-14.2, -6.2)]),
-    ("poly", BELT, [(-15.0, -10.2), (-9.0, -10.2), (-9.2, -11.2), (-14.8, -11.2)]),
-    ("poly", SKIN, [(-14.0, -3.0), (-14.0, -4.6), (-16.6, -2.0)]),
-    ("poly", SKIN, [(-10.0, -3.0), (-10.0, -4.6), (-7.4, -2.0)]),
-    ("ellipse", SKIN, (-12.0, -3.8, 2.5, 2.3)),
-    ("ellipse", COAL, (-12.9, -3.4, 0.45, 0.45)),
-    ("ellipse", COAL, (-11.1, -3.4, 0.45, 0.45)),
-    ("poly", ELF_GREEN, [(-14.8, -1.9), (-9.2, -1.9), (-10.6, 3.6)]),
-    ("ellipse", RED, (-12.0, -1.8, 2.9, 0.6)),
-    ("ellipse", FUR, (-10.4, 3.9, 0.9, 0.9)),
-    # A snowman, with a top hat, coal eyes and buttons, a carrot nose and
-    # a scarf.
-    ("ellipse", SNOW, (44.0, -11.0, 5.6, 5.6)),
-    ("ellipse", SNOW, (44.0, -3.0, 4.3, 4.3)),
-    ("ellipse", SNOW, (44.0, 3.6, 3.3, 3.3)),
-    ("ellipse", SCARF, (44.0, 0.6, 3.8, 0.9)),
-    ("ellipse", COAL, (44.0, -2.5, 0.7, 0.7)),
-    ("ellipse", COAL, (44.0, -5.0, 0.7, 0.7)),
-    ("ellipse", COAL, (42.9, 4.5, 0.6, 0.6)),
-    ("ellipse", COAL, (45.1, 4.5, 0.6, 0.6)),
-    ("poly", CARROT, [(43.5, 3.7), (43.5, 2.7), (48.0, 3.0)]),
-    ("ellipse", COAL, (44.0, 6.6, 4.2, 0.7)),
-    ("poly", COAL, [(41.6, 6.6), (46.4, 6.6), (46.4, 11.0), (41.6, 11.0)]),
-    # Santa: hat...
+    ("poly", GROUND, [(-70, -14.8), (110, -14.8), (110, -40), (-70, -40)]),
+    # Rudolph, out in front: legs, tail, body, neck, head, antlers, eye
+    # and that nose.
+    ("poly", REINDEER, [(37.4, -8.5), (38.6, -8.5), (38.6, -14.4), (37.4, -14.4)]),
+    ("poly", REINDEER, [(40.4, -8.5), (41.6, -8.5), (41.6, -14.4), (40.4, -14.4)]),
+    ("poly", REINDEER, [(47.4, -8.5), (48.6, -8.5), (48.6, -14.4), (47.4, -14.4)]),
+    ("poly", REINDEER, [(50.4, -8.5), (51.6, -8.5), (51.6, -14.4), (50.4, -14.4)]),
+    ("ellipse", FUR, (36.4, -4.5, 1.1, 1.1)),
+    ("ellipse", REINDEER, (44.0, -6.0, 7.6, 3.4)),
+    ("poly", REINDEER, [(48.5, -4.3), (51.8, -5.3), (54.2, -0.1), (51.0, 1.1)]),
+    ("poly", ANTLERS, [(51.0, 2.5), (52.6, 2.5), (50.6, 7.3), (49.0, 7.3)]),
+    ("poly", ANTLERS, [(53.0, 2.5), (54.6, 2.5), (56.0, 7.3), (54.4, 7.3)]),
+    ("ellipse", REINDEER, (53.4, 1.1, 3.0, 1.9)),
+    ("ellipse", COAL, (53.8, 1.7, 0.45, 0.45)),
+    ("ellipse", RUDOLPH, (56.6, 0.6, 1.1, 1.1)),
+    # Santa, from the side: hat...
     ("poly", RED, [(16.0, 12.2), (19.0, 10.2), (25.0, 9.0)]),
     ("ellipse", FUR, (26.0, 8.8, 1.7, 1.7)),
     ("poly", RED, [(3.0, 7.4), (21.0, 7.4), (19.0, 11.6), (10.0, 13.0)]),
-    # ...body: arms, coat with its white trim, belt and buckle, mittens, boots...
-    ("ellipse", RED, (1.5, -6.5, 2.6, 5.2)),
-    ("ellipse", RED, (22.5, -6.5, 2.6, 5.2)),
-    ("poly", RED, [(3.0, -2.0), (21.0, -2.0), (24.0, -13.5), (0.0, -13.5)]),
-    ("poly", FUR, [(10.8, -2.0), (13.2, -2.0), (13.2, -13.5), (10.8, -13.5)]),
-    ("poly", FUR, [(0.0, -12.3), (24.0, -12.3), (24.0, -14.0), (0.0, -14.0)]),
-    ("poly", BELT, [(1.0, -8.3), (23.0, -8.3), (23.3, -10.5), (0.7, -10.5)]),
-    ("ellipse", BUCKLE, (12.0, -9.4, 1.6, 1.3)),
-    ("ellipse", MITTENS, (1.0, -11.8, 1.9, 1.9)),
-    ("ellipse", MITTENS, (23.0, -11.8, 1.9, 1.9)),
-    ("ellipse", BOOTS, (7.0, -15.0, 4.2, 1.8)),
-    ("ellipse", BOOTS, (17.0, -15.0, 4.2, 1.8)),
-    # ...and head: beard behind the face, then the face's features.
-    ("ellipse", BEARD, (12.0, 1.0, 9.2, 6.4)),
+    # ...his body, and his arm reaching out to the front of the sleigh...
+    ("ellipse", RED, (11.0, -3.5, 6.8, 6.0)),
+    ("poly", FUR, [(16.6, -0.5), (18.0, -1.5), (18.0, -8.0), (16.6, -8.0)]),
+    ("ellipse", RED, (18.5, -4.0, 5.0, 2.3)),
+    ("ellipse", MITTENS, (23.0, -4.5, 1.9, 1.9)),
+    # ...the sleigh in front of him, on gold runners...
+    ("poly", SLEIGH, [(-9.0, 0.5), (-3.0, -0.5), (-3.0, -11.6), (-6.5, -11.6)]),
+    ("poly", SLEIGH, [(-6.0, -6.5), (27.0, -6.5), (29.0, -11.6), (-4.5, -11.6)]),
+    ("ellipse", SLEIGH, (29.5, -6.5, 3.0, 2.8)),
+    ("poly", GOLD, [(-4.0, -13.4), (28.0, -13.4), (28.0, -14.4), (-4.0, -14.4)]),
+    ("ellipse", GOLD, (29.5, -12.6, 1.9, 1.9)),
+    # ...and his head: beard behind the face, then the face's features.
+    ("ellipse", BEARD, (12.0, 1.0, 9.2, 6.4), BEARD_DEPTH),
     ("ellipse", SKIN, (12.0, 4.6, 6.4, 2.7)),
-    ("ellipse", CHEEKS, (7.4, 3.6, 1.5, 0.9, 0.55)),
-    ("ellipse", CHEEKS, (16.6, 3.6, 1.5, 0.9, 0.55)),
-    ("crisp", EYE, EYES[0] + EYE_SIZE),
-    ("crisp", EYE, EYES[1] + EYE_SIZE),
-    ("crisp", MOUTH, (12.0, 1.0, 2.4, 0.55)),
-    ("ellipse", MOUSTACHE, (9.5, 2.3, 3.1, 0.85)),
-    ("ellipse", MOUSTACHE, (14.5, 2.3, 3.1, 0.85)),
-    ("crisp", NOSE, (12.0, 3.9, 1.5, 1.1)),
+    ("ellipse", CHEEKS, (7.4, 3.6, 1.5, 0.9, 0.55), FACE_DEPTH),
+    ("ellipse", CHEEKS, (16.6, 3.6, 1.5, 0.9, 0.55), FACE_DEPTH),
+    ("crisp", EYE, EYES[0] + EYE_SIZE, FACE_DEPTH),
+    ("crisp", EYE, EYES[1] + EYE_SIZE, FACE_DEPTH),
+    ("crisp", MOUTH, (12.0, 1.0, 2.4, 0.55), FACE_DEPTH),
+    ("ellipse", MOUSTACHE, (9.5, 2.3, 3.1, 0.85), FACE_DEPTH),
+    ("ellipse", MOUSTACHE, (14.5, 2.3, 3.1, 0.85), FACE_DEPTH),
+    ("crisp", NOSE, (12.0, 3.9, 1.5, 1.1), NOSE_DEPTH),
     ("ellipse", FUR, (12.0, 7.15, 9.6, 0.7)),
 ]
 
 # The two views: zoom (LEDs per unit) and the world point at the middle
 # of the mantle.
-WIDE = (0.26, 12.0, -2.0)
+WIDE = (0.28, 24.5, -0.9)
 CLOSE = (1.0, 12.0, 3.5)
 
 # HO HO HO, in 3x5 letters (taller ones read as thin bars): each HO is
@@ -146,7 +136,8 @@ SCROLL_SPEED = 14.0            # ...at this many columns/sec
 
 # Timing, in seconds.
 WIDE_S = (6.0, 10.0)           # the whole scene
-ZOOM_S = 3.5                   # zooming in or out
+ZOOM_S = 3.5                   # zooming in or out...
+TURN_S = 1.8                   # ...his head turning over the start of it in (end of it out)
 BEFORE_HO_S = (8.0, 14.0)      # close up, then HO HO HO...
 AFTER_HO_S = (6.0, 12.0)       # ...then a while longer before zooming out
 BLINK_EVERY_S = (3.0, 7.0)
@@ -162,16 +153,18 @@ FRAME_MS = 16                  # ~60 FPS
 class Part:
     """One shape of the world, placed on the mantle for a view."""
 
-    def __init__(self, kind, color, where):
+    def __init__(self, kind, color, where, depth=None):
         self.kind = kind
         self.where = where
+        self.depth = depth
         if kind == "poly":
             self.shape = Polygon(color, sides=len(where))
         else:
             self.shape = Ellipse(color, soft=CRISP if kind == "crisp" else SOFT)
 
-    def place(self, zoom, cx, cy):
-        """Set the shape for a camera; it's hidden if it's off the mantle."""
+    def place(self, zoom, cx, cy, turn=0.0):
+        """Set the shape for a camera, with his head turned turn degrees
+        toward Rudolph; it's hidden if it's off the mantle."""
         if self.kind == "poly":
             pts = [((x - cx) * zoom + 12.0, (y - cy) * zoom + 3.5) for x, y in self.where]
             on = (max(x for x, _ in pts) > -1 and min(x for x, _ in pts) < COLS
@@ -182,17 +175,32 @@ class Part:
             return
         x, y, rx, ry = self.where[:4]
         alpha = self.where[4] if len(self.where) > 4 else 1.0
+        if self.depth:
+            x, rx, seen = turned(x, rx, self.depth, turn)
+            alpha *= seen
         x = (x - cx) * zoom + 12.0
         y = (y - cy) * zoom + 3.5
         rx *= zoom
         ry *= zoom
-        if x + rx > -1 and x - rx < COLS and y + ry > -1 and y - ry < ROWS:
+        if alpha > 0 and x + rx > -1 and x - rx < COLS and y + ry > -1 and y - ry < ROWS:
             self.shape.set(x, y, rx, ry, alpha)
         else:
             self.shape.shown = False
 
     def draw(self, light):
         self.shape.draw(light)
+
+
+def turned(x, rx, depth, turn):
+    """Where a feature of the face at x (rx across) ends up with his head
+    turned turn degrees, and how much of it can be seen (0..1)."""
+    if not turn:
+        return x, rx, 1.0
+    a = math.asin(max(-1.0, min(1.0, (x - HEAD_X) / depth))) + math.radians(turn)
+    facing = math.cos(a)
+    # Squeezed as it turns away, gone once it's round the back.
+    return (HEAD_X + depth * math.sin(a), rx * max(0.4, facing),
+            min(1.0, max(0.0, (facing + 0.15) / 0.3)))
 
 
 def _view(f):
@@ -271,29 +279,30 @@ class HoHoHo:
 def santa(strips):
     canvas = Canvas(strips)
     light = canvas.light
-    parts = [Part(kind, color, where) for kind, color, where in WORLD]
+    parts = [Part(*part) for part in WORLD]
     pupils = [Ellipse(PUPIL, soft=CRISP) for _ in EYES]
     lids = [Ellipse(SKIN, soft=CRISP) for _ in EYES]
     lashes = [Ellipse(LASH, soft=CRISP) for _ in EYES]
 
-    def paint(f, with_pupils=True):
+    def paint(f, turn=0.0, with_pupils=True):
         zoom, cx, cy = _view(f)
         canvas.clear()
         for part in parts:
-            part.place(zoom, cx, cy)
+            part.place(zoom, cx, cy, turn)
             part.draw(light)
         if with_pupils:
             for pupil, (x, y) in zip(pupils, EYES):
+                x, rx, seen = turned(x, PUPIL_SIZE[0], FACE_DEPTH, turn)
                 pupil.set((x - cx) * zoom + 12.0, (y - cy) * zoom + 3.5,
-                          PUPIL_SIZE[0] * zoom, PUPIL_SIZE[1] * zoom)
+                          rx * zoom, PUPIL_SIZE[1] * zoom, seen)
                 pupil.draw(light)
 
     # The still views, painted once.
-    paint(0.0)
+    paint(0.0, PROFILE)
     wide = array.array("H", light)
     paint(1.0)
     face_open = array.array("H", light)
-    paint(1.0, with_pupils=False)
+    paint(1.0, 0.0, with_pupils=False)
     face = array.array("H", light)
 
     ho = HoHoHo()
@@ -325,9 +334,12 @@ def santa(strips):
 
         if what == "wide":
             light[:] = wide
-        elif what in ("in", "out"):
-            f = ease(age / ZOOM_S)
-            paint(f if what == "in" else 1.0 - f)
+        elif what == "in":
+            # He turns to face us as the zoom begins...
+            paint(ease(age / ZOOM_S), PROFILE * (1.0 - ease(age / TURN_S)))
+        elif what == "out":
+            # ...and back toward Rudolph as it ends.
+            paint(1.0 - ease(age / ZOOM_S), PROFILE * ease((age - ZOOM_S + TURN_S) / TURN_S))
         elif what == "ho":
             ho.draw(light, age, face_open)
         else:
