@@ -17,7 +17,9 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # blink. Partway through he says HO HO HO: each HO shows on its own in
 # turn, then all three blink together and scroll off to the left, his
 # face scrolling back in behind them. Then he turns back to the road as
-# it zooms back out, and round again.
+# it zooms back out, and the sleigh takes off, flying away up to the
+# right, then comes back in from the left for a landing, and round
+# again.
 #
 # Positions are in "close-up" units: at full zoom one unit is one LED,
 # x = column and y = row (0 = bottom), so the face's features land on
@@ -87,7 +89,7 @@ WORLD = [
     # Santa, from the side: hat...
     ("poly", RED, [(16.0, 12.2), (19.0, 10.2), (25.0, 9.0)]),
     ("ellipse", FUR, (26.0, 8.8, 1.7, 1.7)),
-    ("poly", RED, [(3.0, 7.4), (21.0, 7.4), (19.0, 11.6), (10.0, 13.0)]),
+    ("poly", RED, [(5.6, 7.4), (18.4, 7.4), (17.5, 11.6), (10.0, 13.0)]),
     # ...his body, and his arm reaching out to the front of the sleigh...
     ("ellipse", RED, (11.0, -3.5, 6.8, 6.0)),
     ("poly", FUR, [(16.6, -0.5), (18.0, -1.5), (18.0, -8.0), (16.6, -8.0)]),
@@ -110,7 +112,8 @@ WORLD = [
     ("ellipse", MOUSTACHE, (9.5, 2.3, 3.1, 0.85), FACE_DEPTH),
     ("ellipse", MOUSTACHE, (14.5, 2.3, 3.1, 0.85), FACE_DEPTH),
     ("crisp", NOSE, (12.0, 3.9, 1.5, 1.1), NOSE_DEPTH),
-    ("ellipse", FUR, (12.0, 7.15, 9.6, 0.7)),
+    # The hat's soft fur trim: one row across his head, close up.
+    ("ellipse", FUR, (12.0, 7.1, 6.8, 0.5)),
 ]
 
 # The two views: zoom (LEDs per unit) and the world point at the middle
@@ -137,7 +140,12 @@ SCROLL_SPEED = 14.0            # ...at this many columns/sec
 # Timing, in seconds.
 WIDE_S = (6.0, 10.0)           # the whole scene
 ZOOM_S = 3.5                   # zooming in or out...
-TURN_S = 1.8                   # ...his head turning over the start of it in (end of it out)
+TURN_START_S = 1.4             # ...his head starting to turn this far into it, once
+TURN_S = 1.6                   # his face is big enough to see it (the reverse going out)
+TAKEOFF_S = 3.5                # a run along the snow, then up and away to the right...
+LAND_S = 4.0                   # ...and back in from the left
+FLY_X = 100.0                  # how far it flies off to the side...
+FLY_Y = 35.0                   # ...and up
 BEFORE_HO_S = (8.0, 14.0)      # close up, then HO HO HO...
 AFTER_HO_S = (6.0, 12.0)       # ...then a while longer before zooming out
 BLINK_EVERY_S = (3.0, 7.0)
@@ -157,14 +165,19 @@ class Part:
         self.kind = kind
         self.where = where
         self.depth = depth
+        self.flies = color != GROUND     # everything but the ground goes with the sleigh
         if kind == "poly":
             self.shape = Polygon(color, sides=len(where))
         else:
             self.shape = Ellipse(color, soft=CRISP if kind == "crisp" else SOFT)
 
-    def place(self, zoom, cx, cy, turn=0.0):
+    def place(self, zoom, cx, cy, turn=0.0, fly_x=0.0, fly_y=0.0):
         """Set the shape for a camera, with his head turned turn degrees
-        toward Rudolph; it's hidden if it's off the mantle."""
+        toward Rudolph and the sleigh flown (fly_x, fly_y) from where it
+        stands; it's hidden if it's off the mantle."""
+        if self.flies:
+            cx -= fly_x
+            cy -= fly_y
         if self.kind == "poly":
             pts = [((x - cx) * zoom + 12.0, (y - cy) * zoom + 3.5) for x, y in self.where]
             on = (max(x for x, _ in pts) > -1 and min(x for x, _ in pts) < COLS
@@ -284,16 +297,16 @@ def santa(strips):
     lids = [Ellipse(SKIN, soft=CRISP) for _ in EYES]
     lashes = [Ellipse(LASH, soft=CRISP) for _ in EYES]
 
-    def paint(f, turn=0.0, with_pupils=True):
+    def paint(f, turn=0.0, with_pupils=True, fly_x=0.0, fly_y=0.0):
         zoom, cx, cy = _view(f)
         canvas.clear()
         for part in parts:
-            part.place(zoom, cx, cy, turn)
+            part.place(zoom, cx, cy, turn, fly_x, fly_y)
             part.draw(light)
         if with_pupils:
             for pupil, (x, y) in zip(pupils, EYES):
                 x, rx, seen = turned(x, PUPIL_SIZE[0], FACE_DEPTH, turn)
-                pupil.set((x - cx) * zoom + 12.0, (y - cy) * zoom + 3.5,
+                pupil.set((x + fly_x - cx) * zoom + 12.0, (y + fly_y - cy) * zoom + 3.5,
                           rx * zoom, PUPIL_SIZE[1] * zoom, seen)
                 pupil.draw(light)
 
@@ -308,11 +321,12 @@ def santa(strips):
     ho = HoHoHo()
     eyes = Eyes(0.0, BLINK_EVERY_S, BLINK_S, 0.0, LOOKS)
     scene_start = utime.ticks_ms()
-    # The cycle: wide, zoom in, close up, HO HO HO, close up, zoom out.
-    phases = ("wide", "in", "close", "ho", "close", "out")
+    # The cycle: land, wide, zoom in, close up, HO HO HO, close up, zoom
+    # out, take off.
+    phases = ("land", "wide", "in", "close", "ho", "close", "out", "takeoff")
     phase = 0
     start = 0.0
-    hold = random.uniform(*WIDE_S)
+    hold = LAND_S
 
     while True:
         frame_start = utime.ticks_ms()
@@ -323,6 +337,10 @@ def santa(strips):
             what = phases[phase]
             if what == "wide":
                 hold = random.uniform(*WIDE_S)
+            elif what == "land":
+                hold = LAND_S
+            elif what == "takeoff":
+                hold = TAKEOFF_S
             elif what in ("in", "out"):
                 hold = ZOOM_S
             elif what == "ho":
@@ -335,11 +353,22 @@ def santa(strips):
         if what == "wide":
             light[:] = wide
         elif what == "in":
-            # He turns to face us as the zoom begins...
-            paint(ease(age / ZOOM_S), PROFILE * (1.0 - ease(age / TURN_S)))
+            # He turns to face us partway into the zoom...
+            paint(ease(age / ZOOM_S), PROFILE * (1.0 - ease((age - TURN_START_S) / TURN_S)))
         elif what == "out":
-            # ...and back toward Rudolph as it ends.
-            paint(1.0 - ease(age / ZOOM_S), PROFILE * ease((age - ZOOM_S + TURN_S) / TURN_S))
+            # ...and back toward Rudolph early in the zoom out.
+            paint(1.0 - ease(age / ZOOM_S),
+                  PROFILE * ease((age - (ZOOM_S - TURN_START_S - TURN_S)) / TURN_S))
+        elif what == "takeoff":
+            # A run along the snow, then climbing away, faster and faster.
+            u = age / TAKEOFF_S
+            lift = max(0.0, (u - 0.25) / 0.75)
+            paint(0.0, PROFILE, True, FLY_X * u * u, FLY_Y * lift * lift)
+        elif what == "land":
+            # Gliding in from high on the left, slowing, touching down just
+            # before it comes to a stop.
+            u = 1.0 - min(1.0, age / LAND_S)
+            paint(0.0, PROFILE, True, -FLY_X * u * u, FLY_Y * u * u * u)
         elif what == "ho":
             ho.draw(light, age, face_open)
         else:
