@@ -1,16 +1,14 @@
-import math
-import random
+import array
 import utime
 from canvas import Canvas
 from faces import Eyes
-from shapes import Ellipse, Polygon, ease
+from shapes import Ellipse, Polygon
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 # One of Santa's elves, face on: pointy ears, a floppy hat with a
-# pom-pom, rosy cheeks. The eyes blink and look around, and every few
-# seconds the elf chats or giggles, ears wiggling and pom-pom bouncing.
+# pom-pom, rosy cheeks and a smile. The eyes blink and look around.
 #
 # Positions are in LED spacings: x = column, y = row (0 = bottom).
 # Colors are as they'd look with gamma off.
@@ -23,7 +21,6 @@ CHEEK_ALPHA = 0.5
 EYE = (0, 0, 0)
 GLINT = (200, 200, 200)
 MOUTH = (0, 0, 0)
-TONGUE = (150, 10, 10)
 HAT = (0, 120, 15)
 BRIM = (170, 0, 0)
 POM_POM = (170, 170, 160)
@@ -39,7 +36,7 @@ INNER_EARS = [((8.2, 4.2), (8.2, 3.1), (6.7, 3.7), (5.6, 5.0)),
 EYES = [(10.5, 3.5), (13.5, 3.5)]         # each a 2x2 block of LEDs
 EYE_SIZE = (1.05, 1.1)
 GLINT_AT = (-0.5, 0.5, 0.35, 0.55)         # glint offset in the eye, size, brightness
-LOOK_REACH = (0.35, 0.2)                   # how far the eyes move
+LOOK_REACH = (0.5, 0.25)                   # how far the eyes move
 NOSE_AT = (12.0, 2.1, 0.55)
 CHEEK_AT = [(9.3, 2.0), (14.7, 2.0)]
 CHEEK_R = 0.7
@@ -52,54 +49,7 @@ HAT_TIP = [(15.0, 7.8), (17.2, 6.3), (21.3, 6.3)]
 BRIM_AT = (12.0, 5.0, 3.9, 0.5)
 POM_AT = (21.6, 6.5, 0.9)
 
-# Timing, in seconds.
-IDLE_S = (2.5, 6.0)            # just smiling between chats and giggles
-CHAT_S = (1.5, 2.8)
-CHAT_HZ = 4.0                  # mouth opening and closing
-GIGGLE_S = 1.6
-GIGGLE_HZ = 5.0                # little bounces
-GIGGLE_BOUNCE = 0.3            # rows
-EAR_WIGGLE = 0.4               # rows the ear tips flick while giggling
-POM_SPRING_HZ = 2.0            # the pom-pom swings after the head moves
-POM_DAMPING = 0.15
-
 FRAME_MS = 16                  # ~60 FPS
-
-
-# ============================================================
-# MOOD
-# ============================================================
-
-class Mood:
-    """Smiling, chatting or giggling, in turns."""
-
-    def __init__(self, t):
-        self.what = "idle"
-        self.start = t
-        self.hold = random.uniform(*IDLE_S)
-
-    def update(self, t):
-        """How open the mouth is (0..1), how hard it's giggling (0..1)
-        and how far the head has bounced up (rows)."""
-        age = t - self.start
-        if age >= self.hold:
-            if self.what == "idle":
-                self.what = random.choice(("chat", "chat", "giggle"))
-                self.hold = random.uniform(*CHAT_S) if self.what == "chat" else GIGGLE_S
-            else:
-                self.what = "idle"
-                self.hold = random.uniform(*IDLE_S)
-            self.start = t
-            age = 0.0
-        if self.what == "chat":
-            # Fades in and out over the first and last bit.
-            env = min(1.0, age / 0.2, (self.hold - age) / 0.2)
-            return env * (0.5 - 0.5 * math.cos(2 * math.pi * CHAT_HZ * age)), 0.0, 0.0
-        if self.what == "giggle":
-            env = math.sin(math.pi * age / self.hold)
-            bounce = GIGGLE_BOUNCE * env * abs(math.sin(math.pi * GIGGLE_HZ * age))
-            return 0.8 * ease(min(1.0, age / 0.15, (self.hold - age) / 0.15)), env, bounce
-        return 0.0, 0.0, 0.0
 
 
 # ============================================================
@@ -110,80 +60,44 @@ def santas_elf(strips):
     canvas = Canvas(strips)
     light = canvas.light
 
-    hat = Polygon(HAT)
-    hat_tip = Polygon(HAT, sides=3)
-    ears = [Polygon(SKIN, soft=CRISP * 1.5) for _ in EARS]
-    inner_ears = [Polygon(INNER_EAR, soft=CRISP * 1.5) for _ in INNER_EARS]
-    face = Ellipse(SKIN)
-    cheeks = [Ellipse(CHEEKS) for _ in CHEEK_AT]
+    # Everything but the eyes stays still: paint it once and copy it in
+    # each frame. Ears go over the edges of the face and brim.
+    still = [Polygon(HAT, HAT_BODY), Polygon(HAT, HAT_TIP, sides=3),
+             Ellipse(SKIN, *FACE), Ellipse(BRIM, *BRIM_AT)]
+    still += [Polygon(SKIN, list(ear), soft=CRISP * 1.5) for ear in EARS]
+    still += [Polygon(INNER_EAR, list(ear), soft=CRISP * 1.5) for ear in INNER_EARS]
+    still += [Ellipse(CHEEKS, x, y, CHEEK_R, CHEEK_R * 0.8, CHEEK_ALPHA) for x, y in CHEEK_AT]
+    still.append(Ellipse(NOSE, NOSE_AT[0], NOSE_AT[1], NOSE_AT[2], NOSE_AT[2], soft=CRISP))
+    # The smile: a dark line with its corners turned up a row.
+    mx, my, mw = SMILE_AT
+    still.append(Ellipse(MOUTH, mx, my, mw, 0.5, soft=CRISP))
+    still += [Ellipse(MOUTH, mx + side * CORNERS_DX, my + 1.0, CORNER_R, CORNER_R, soft=CRISP)
+              for side in (-1, 1)]
+    still.append(Ellipse(POM_POM, POM_AT[0], POM_AT[1], POM_AT[2], POM_AT[2]))
+    for shape in still:
+        shape.draw(light)
+    face = array.array("H", light)
+
     eye_shapes = [Ellipse(EYE, soft=CRISP) for _ in EYES]
     glints = [Ellipse(GLINT, soft=CRISP) for _ in EYES]
-    nose = Ellipse(NOSE, soft=CRISP)
-    mouth = Ellipse(MOUTH, soft=CRISP)
-    corners = [Ellipse(MOUTH, soft=CRISP) for _ in range(2)]
-    tongue = Ellipse(TONGUE, soft=CRISP)
-    brim = Ellipse(BRIM)
-    pom = Ellipse(POM_POM)
-
     scene_start = utime.ticks_ms()
     eyes = Eyes(0.0)
-    mood = Mood(0.0)
-    pom_y = pom_v = 0.0
-    stiffness = (2 * math.pi * POM_SPRING_HZ) ** 2
-    damping = 2 * POM_DAMPING * math.sqrt(stiffness)
-    last_t = 0.0
 
     while True:
         frame_start = utime.ticks_ms()
         t = utime.ticks_diff(frame_start, scene_start) / 1000
-        dt = min(0.1, t - last_t)
-        last_t = t
 
         opened, look_x, look_y = eyes.update(t)
-        talk, giggle, dy = mood.update(t)
-        # Squinting with laughter.
-        opened = min(opened, 1.0 - 0.55 * giggle)
-
-        # The pom-pom lags behind the head's bounce.
-        pom_v += (stiffness * (dy - pom_y) - damping * pom_v) * dt
-        pom_y += pom_v * dt
-
-        x, y, rx, ry = FACE
-        flick = EAR_WIGGLE * giggle * math.sin(2 * math.pi * 6.0 * t)
-        for ear, (a, b, c, tip) in zip(ears + inner_ears, EARS + INNER_EARS):
-            ear.set([(a[0], a[1] + dy), (b[0], b[1] + dy), (c[0], c[1] + dy),
-                     (tip[0], tip[1] + dy + flick)])
-        hat.set([(px, py + dy) for px, py in HAT_BODY])
-        hat_tip.set([(px, py + dy + (pom_y - dy) * (px - 14.6) / 6.4) for px, py in HAT_TIP])
-        face.set(x, y + dy, rx, ry)
-        for cheek, (cx, cy) in zip(cheeks, CHEEK_AT):
-            cheek.set(cx, cy + dy, CHEEK_R, CHEEK_R * 0.8, CHEEK_ALPHA * (1 + 0.6 * giggle))
+        light[:] = face
         for i, (ex, ey) in enumerate(EYES):
             # Closed, an eye is a dark line.
             ex += LOOK_REACH[0] * look_x
-            ey += dy + LOOK_REACH[1] * look_y
+            ey += LOOK_REACH[1] * look_y
             eye_shapes[i].set(ex, ey, EYE_SIZE[0], EYE_SIZE[1] * max(0.2, opened))
             gx, gy, gr, ga = GLINT_AT
             glints[i].set(ex + gx, ey + gy * opened, gr, gr, ga * max(0.0, opened * 2 - 1))
-        nose.set(NOSE_AT[0], NOSE_AT[1] + dy, NOSE_AT[2], NOSE_AT[2])
-        # The mouth: a dark line with its corners turned up; open, it
-        # grows down into an oval with a tongue at the bottom.
-        mx, my, mw = SMILE_AT
-        mouth.set(mx, my + dy - 0.35 * talk, mw - 0.6 * talk, 0.5 + 0.6 * talk)
-        for side, corner in zip((-1, 1), corners):
-            corner.set(mx + side * (CORNERS_DX - 0.8 * talk), my + dy + 1.0 - 0.4 * talk,
-                       CORNER_R, CORNER_R)
-        tongue.set(mx, my + dy - 0.7, 0.8, 0.4, ease((talk - 0.3) / 0.5))
-        brim.set(BRIM_AT[0], BRIM_AT[1] + dy, BRIM_AT[2], BRIM_AT[3])
-        pom.set(POM_AT[0], POM_AT[1] + pom_y, POM_AT[2], POM_AT[2])
-
-        canvas.clear()
-        # Ears last of the head, over the edges of the face and brim.
-        for shape in (hat, hat_tip, face, brim, ears[0], ears[1], inner_ears[0], inner_ears[1],
-                      cheeks[0], cheeks[1],
-                      eye_shapes[0], eye_shapes[1], glints[0], glints[1],
-                      nose, mouth, corners[0], corners[1], tongue, pom):
-            shape.draw(light)
+            eye_shapes[i].draw(light)
+            glints[i].draw(light)
         canvas.show()
 
         elapsed = utime.ticks_diff(utime.ticks_ms(), frame_start)
