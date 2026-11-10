@@ -56,14 +56,15 @@ BLINK_S = 0.28
 WINK_EVERY_S = (8.0, 20.0)
 WINK_S = 0.6
 
-# HO HO HO, in 3x7 letters: each HO is 7 columns, two apart, filling
-# the 25 columns. Each glyph is its rows, top first.
+# HO HO HO, in 3x5 letters (taller ones read as thin bars): each HO is
+# 7 columns, two apart, filling the 25 columns. Each glyph is its rows,
+# top first.
 GLYPHS = {
-    "H": ("X.X", "X.X", "X.X", "XXX", "X.X", "X.X", "X.X"),
-    "O": ("XXX", "X.X", "X.X", "X.X", "X.X", "X.X", "XXX"),
+    "H": ("X.X", "X.X", "XXX", "X.X", "X.X"),
+    "O": ("XXX", "X.X", "X.X", "X.X", "XXX"),
 }
 HOS = [(0, (200, 0, 0)), (9, (170, 170, 170)), (18, (200, 0, 0))]   # left column, color
-TEXT_TOP = 7                   # the letters' top row
+TEXT_TOP = 6                   # the letters' top row
 HO_EVERY_S = (20.0, 45.0)
 HO_S = 0.6                     # each HO on its own...
 FLASH_ON_S = 0.35              # ...then all three blink together...
