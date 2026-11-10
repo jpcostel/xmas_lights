@@ -14,8 +14,13 @@ LOOKS = [(0.0, 0.0), (0.0, 0.0), (-1.0, 0.0), (1.0, 0.0), (-0.7, 0.5), (0.7, 0.5
 
 
 class Eyes:
-    def __init__(self, t):
-        self.blink_at = t + random.uniform(*BLINK_EVERY_S)
+    def __init__(self, t, blink_every=BLINK_EVERY_S, blink_s=BLINK_S, double_blink=DOUBLE_BLINK,
+                 looks=LOOKS):
+        self.looks = looks
+        self.blink_every = blink_every
+        self.blink_s = blink_s
+        self.double_blink = double_blink
+        self.blink_at = t + random.uniform(*blink_every)
         self.look_at = t + random.uniform(*LOOK_EVERY_S)
         self.look_start = t
         self.look_from = (0.0, 0.0)
@@ -26,17 +31,17 @@ class Eyes:
         (dx, dy, each -1..1)."""
         g = t - self.blink_at
         opened = 1.0
-        if g >= BLINK_S:
-            if random.random() < DOUBLE_BLINK:
+        if g >= self.blink_s:
+            if random.random() < self.double_blink:
                 self.blink_at = t + 0.12
             else:
-                self.blink_at = t + random.uniform(*BLINK_EVERY_S)
+                self.blink_at = t + random.uniform(*self.blink_every)
         elif g >= 0.0:
-            opened = 1.0 - math.sin(math.pi * g / BLINK_S)
+            opened = 1.0 - math.sin(math.pi * g / self.blink_s)
 
         if t >= self.look_at:
             self.look_from = self.where(t)
-            self.look_to = random.choice(LOOKS)
+            self.look_to = random.choice(self.looks)
             self.look_start = t
             self.look_at = t + LOOK_S + random.uniform(*LOOK_EVERY_S)
         dx, dy = self.where(t)
