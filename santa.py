@@ -9,8 +9,8 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # ============================================================
 # CONFIGURATION
 # ============================================================
-# Santa at the North Pole. It starts wide: Santa head to boots, a
-# striped North Pole on one side and a snowman on the other. Then it
+# Santa at the North Pole. It starts wide: Santa head to boots, an elf
+# at his side and a snowman on the other. Then it
 # zooms in on his face, so close the bottom of his beard is cut off,
 # leaving room for big eyes that look around and blink. Partway
 # through he says HO HO HO: each HO shows on its own in turn, then all
@@ -25,8 +25,11 @@ from shapes import Ellipse, Polygon, SOFT, ease
 SKIN = (130, 58, 28)
 CHEEKS = (210, 30, 30)
 NOSE = (210, 25, 15)
-EYE_WHITE = (190, 190, 190)
-PUPIL = (0, 0, 0)
+# The eyes are flipped from life: dark, with a bright pupil. On the
+# LEDs a lit pupil reads as where he's looking; a dark one splitting a
+# white eye just looked confusing.
+EYE = (0, 0, 0)
+PUPIL = (200, 200, 200)
 LASH = (20, 5, 0)
 MOUTH = (110, 8, 8)
 BEARD = (120, 120, 120)
@@ -42,15 +45,14 @@ GROUND = (60, 60, 72)
 COAL = (12, 12, 14)
 CARROT = (220, 70, 0)
 SCARF = (0, 110, 20)
-POLE = (170, 170, 165)
-STRIPE = (190, 0, 0)
-GOLD = (220, 160, 0)
+ELF_GREEN = (0, 120, 15)
+ELF_SHOES = (0, 50, 10)
 
 # The close-up, row by row: hat brim 7, eyes 5-6, nose 3-4, moustache 2,
-# mouth 1. Eyes: whites 3 LEDs wide with a pupil one LED wide that looks
-# left, ahead or right; three lit LEDs between them keep them apart.
+# mouth 1. Eyes: 3 LEDs wide with a pupil one LED wide that looks left,
+# ahead or right; three lit LEDs between them keep them apart.
 EYES = [(9.0, 5.5), (15.0, 5.5)]
-WHITE_SIZE = (1.6, 1.05)
+EYE_SIZE = (1.6, 1.05)
 PUPIL_SIZE = (0.55, 1.05)
 LOOKS = [(0.0, 0.0), (0.0, 0.0), (-1.0, 0.0), (1.0, 0.0)]   # pupil moves a whole LED
 CRISP = 0.45                   # edge softness of the small features
@@ -60,13 +62,24 @@ CRISP = 0.45                   # edge softness of the small features
 # polygons ("poly") their corners.
 WORLD = [
     ("poly", GROUND, [(-70, -16.6), (94, -16.6), (94, -40), (-70, -40)]),
-    # The North Pole: a striped pole with a gold ball on top.
-    ("poly", POLE, [(-21.3, -16.6), (-18.7, -16.6), (-18.7, 9.0), (-21.3, 9.0)]),
-] + [
-    ("poly", STRIPE, [(-21.3, y), (-18.7, y + 1.6), (-18.7, y + 3.2), (-21.3, y + 1.6)])
-    for y in range(-16, 8, 4)
-] + [
-    ("ellipse", GOLD, (-20.0, 10.6, 2.3, 2.3)),
+    # An elf at Santa's side: shoes, red legs, green tunic with a belt,
+    # pointy ears and a pointed hat with a pom-pom.
+    ("ellipse", ELF_SHOES, (-13.8, -16.0, 1.6, 0.7)),
+    ("ellipse", ELF_SHOES, (-10.2, -16.0, 1.6, 0.7)),
+    ("poly", RED, [(-14.0, -15.6), (-12.6, -15.6), (-12.6, -12.4), (-14.0, -12.4)]),
+    ("poly", RED, [(-11.4, -15.6), (-10.0, -15.6), (-10.0, -12.4), (-11.4, -12.4)]),
+    ("ellipse", ELF_GREEN, (-15.4, -8.6, 1.1, 2.6)),
+    ("ellipse", ELF_GREEN, (-8.6, -8.6, 1.1, 2.6)),
+    ("poly", ELF_GREEN, [(-15.4, -12.6), (-8.6, -12.6), (-9.8, -6.2), (-14.2, -6.2)]),
+    ("poly", BELT, [(-15.0, -10.2), (-9.0, -10.2), (-9.2, -11.2), (-14.8, -11.2)]),
+    ("poly", SKIN, [(-14.0, -3.0), (-14.0, -4.6), (-16.6, -2.0)]),
+    ("poly", SKIN, [(-10.0, -3.0), (-10.0, -4.6), (-7.4, -2.0)]),
+    ("ellipse", SKIN, (-12.0, -3.8, 2.5, 2.3)),
+    ("ellipse", COAL, (-12.9, -3.4, 0.45, 0.45)),
+    ("ellipse", COAL, (-11.1, -3.4, 0.45, 0.45)),
+    ("poly", ELF_GREEN, [(-14.8, -1.9), (-9.2, -1.9), (-10.6, 3.6)]),
+    ("ellipse", RED, (-12.0, -1.8, 2.9, 0.6)),
+    ("ellipse", FUR, (-10.4, 3.9, 0.9, 0.9)),
     # A snowman, with a top hat, coal eyes and buttons, a carrot nose and
     # a scarf.
     ("ellipse", SNOW, (44.0, -11.0, 5.6, 5.6)),
@@ -101,8 +114,8 @@ WORLD = [
     ("ellipse", SKIN, (12.0, 4.6, 6.4, 2.7)),
     ("ellipse", CHEEKS, (7.4, 3.6, 1.5, 0.9, 0.55)),
     ("ellipse", CHEEKS, (16.6, 3.6, 1.5, 0.9, 0.55)),
-    ("crisp", EYE_WHITE, EYES[0] + WHITE_SIZE),
-    ("crisp", EYE_WHITE, EYES[1] + WHITE_SIZE),
+    ("crisp", EYE, EYES[0] + EYE_SIZE),
+    ("crisp", EYE, EYES[1] + EYE_SIZE),
     ("crisp", MOUTH, (12.0, 1.0, 2.4, 0.55)),
     ("ellipse", MOUSTACHE, (9.5, 2.3, 3.1, 0.85)),
     ("ellipse", MOUSTACHE, (14.5, 2.3, 3.1, 0.85)),
@@ -327,9 +340,9 @@ def santa(strips):
                 # Blinking: skin comes down over the eye, leaving a dark
                 # line of lashes along the bottom.
                 if shut > 0.02:
-                    lids[i].set(x, y, WHITE_SIZE[0], WHITE_SIZE[1], shut)
+                    lids[i].set(x, y, EYE_SIZE[0], EYE_SIZE[1], shut)
                     lids[i].draw(light)
-                    lashes[i].set(x, y - 0.5, WHITE_SIZE[0] * 0.9, 0.45, shut)
+                    lashes[i].set(x, y - 0.5, EYE_SIZE[0] * 0.9, 0.45, shut)
                     lashes[i].draw(light)
         canvas.show()
 
