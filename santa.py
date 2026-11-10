@@ -16,7 +16,7 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # beard is cut off, leaving room for big eyes that look around and
 # blink. Partway through he says HO HO HO: each HO shows on its own in
 # turn, then all three blink together and scroll off to the left, his
-# face scrolling back in behind them. Then he turns back to the road as
+# face scrolling back in behind them, laughing. Then he turns back to the road as
 # it zooms back out, and the sleigh takes off, flying away up to the
 # right, then comes back in from the left for a landing, and round
 # again.
@@ -44,6 +44,9 @@ SLEIGH = (150, 0, 10)
 GOLD = (200, 140, 0)
 MITTENS = (0, 60, 12)
 GROUND = (60, 60, 72)
+EVERGREEN = (0, 32, 8)         # dim: they're background
+TRUNK = (40, 18, 4)
+LAUGH_MOUTH = (45, 0, 0)
 REINDEER = (95, 48, 15)
 ANTLERS = (150, 110, 60)
 RUDOLPH = (255, 0, 0)          # his nose
@@ -56,6 +59,8 @@ EYES = [(9.0, 5.5), (15.0, 5.5)]
 EYE_SIZE = (1.6, 1.05)
 PUPIL_SIZE = (0.55, 1.05)
 LOOKS = [(0.0, 0.0), (0.0, 0.0), (-1.0, 0.0), (1.0, 0.0)]   # pupil moves a whole LED
+# Laughing eyes, squeezed into happy arcs: the LEDs (column, row) of ^ ^.
+LAUGH_EYES = [(9, 6), (8, 5), (10, 5), (15, 6), (14, 5), (16, 5)]
 CRISP = 0.45                   # edge softness of the small features
 
 # The face's features sit on a rounded head: those with a depth (how
@@ -72,6 +77,17 @@ NOSE_DEPTH = 7.4
 # (x, y, rx, ry[, alpha]), polygons ("poly") their corners.
 WORLD = [
     ("poly", GROUND, [(-70, -14.8), (110, -14.8), (110, -40), (-70, -40)]),
+    # Two evergreens behind it all, clear of the close-up of his face.
+] + [
+    part
+    for tx in (-10.0, 64.0)
+    for part in (
+        ("poly", TRUNK, [(tx - 1.2, -14.8), (tx + 1.2, -14.8), (tx + 1.2, -12.0), (tx - 1.2, -12.0)]),
+        ("poly", EVERGREEN, [(tx - 8.0, -12.5), (tx + 8.0, -12.5), (tx, -1.5)]),
+        ("poly", EVERGREEN, [(tx - 6.5, -6.5), (tx + 6.5, -6.5), (tx, 4.0)]),
+        ("poly", EVERGREEN, [(tx - 5.0, -0.5), (tx + 5.0, -0.5), (tx, 9.5)]),
+    )
+] + [
     # Rudolph, out in front: legs, tail, body, neck, head, antlers, eye
     # and that nose.
     ("poly", REINDEER, [(37.4, -8.5), (38.6, -8.5), (38.6, -14.4), (37.4, -14.4)]),
@@ -138,10 +154,12 @@ SCROLL_GAP = 3                 # ...and scroll off, the face this far behind...
 SCROLL_SPEED = 14.0            # ...at this many columns/sec
 
 # Timing, in seconds.
-WIDE_S = (6.0, 10.0)           # the whole scene
+WIDE_S = (2.0, 3.5)            # the whole scene
 ZOOM_S = 3.5                   # zooming in or out...
-TURN_START_S = 1.4             # ...his head starting to turn this far into it, once
-TURN_S = 1.6                   # his face is big enough to see it (the reverse going out)
+TURN_START_S = 2.0             # ...his head starting to turn this far into it, once
+TURN_S = 1.45                  # his face is big enough to see it (the reverse going out)
+LAUGH_S = 2.5                  # laughing, once his face is back after HO HO HO...
+LAUGH_HZ = 2.5                 # ...mouth opening wide with each ha
 TAKEOFF_S = 3.5                # a run along the snow, then up and away to the right...
 LAND_S = 4.0                   # ...and back in from the left
 FLY_X = 100.0                  # how far it flies off to the side...
@@ -165,7 +183,8 @@ class Part:
         self.kind = kind
         self.where = where
         self.depth = depth
-        self.flies = color != GROUND     # everything but the ground goes with the sleigh
+        # The ground and trees stay put when the sleigh flies.
+        self.flies = color not in (GROUND, EVERGREEN, TRUNK)
         if kind == "poly":
             self.shape = Polygon(color, sides=len(where))
         else:
@@ -296,11 +315,21 @@ def santa(strips):
     pupils = [Ellipse(PUPIL, soft=CRISP) for _ in EYES]
     lids = [Ellipse(SKIN, soft=CRISP) for _ in EYES]
     lashes = [Ellipse(LASH, soft=CRISP) for _ in EYES]
+    laugh_cheeks = [Ellipse(CHEEKS, x, 3.6, 1.6, 1.0, 0.6) for x in (7.4, 16.6)]
+    laugh_mouth = Ellipse(LAUGH_MOUTH, soft=CRISP)
+
+    backdrop = None              # the ground and trees in the wide view
 
     def paint(f, turn=0.0, with_pupils=True, fly_x=0.0, fly_y=0.0):
         zoom, cx, cy = _view(f)
-        canvas.clear()
-        for part in parts:
+        # In the wide view only the sleigh moves: the rest is painted once.
+        if f == 0.0 and backdrop:
+            light[:] = backdrop
+            moving = [part for part in parts if part.flies]
+        else:
+            canvas.clear()
+            moving = parts
+        for part in moving:
             part.place(zoom, cx, cy, turn, fly_x, fly_y)
             part.draw(light)
         if with_pupils:
@@ -311,6 +340,12 @@ def santa(strips):
                 pupil.draw(light)
 
     # The still views, painted once.
+    canvas.clear()
+    for part in parts:
+        if not part.flies:
+            part.place(*_view(0.0))
+            part.draw(light)
+    backdrop = array.array("H", light)
     paint(0.0, PROFILE)
     wide = array.array("H", light)
     paint(1.0)
@@ -323,7 +358,7 @@ def santa(strips):
     scene_start = utime.ticks_ms()
     # The cycle: land, wide, zoom in, close up, HO HO HO, close up, zoom
     # out, take off.
-    phases = ("land", "wide", "in", "close", "ho", "close", "out", "takeoff")
+    phases = ("land", "wide", "in", "close", "ho", "laugh", "close", "out", "takeoff")
     phase = 0
     start = 0.0
     hold = LAND_S
@@ -341,6 +376,8 @@ def santa(strips):
                 hold = LAND_S
             elif what == "takeoff":
                 hold = TAKEOFF_S
+            elif what == "laugh":
+                hold = LAUGH_S
             elif what in ("in", "out"):
                 hold = ZOOM_S
             elif what == "ho":
@@ -371,6 +408,21 @@ def santa(strips):
             paint(0.0, PROFILE, True, -FLY_X * u * u, FLY_Y * u * u * u)
         elif what == "ho":
             ho.draw(light, age, face_open)
+        elif what == "laugh":
+            # Eyes squeezed into happy arcs, rosy cheeks, and a big open
+            # mouth with each ha.
+            light[:] = face
+            for lid, (x, y) in zip(lids, EYES):
+                lid.set(x, y, EYE_SIZE[0], EYE_SIZE[1])
+                lid.draw(light)
+            for col, row in LAUGH_EYES:
+                o = 3 * (row * COLS + col)
+                light[o] = light[o + 1] = light[o + 2] = 0
+            for cheek in laugh_cheeks:
+                cheek.draw(light)
+            ha = abs(math.sin(math.pi * LAUGH_HZ * age))
+            laugh_mouth.set(12.0, 0.8, 2.7, 0.75 + 0.4 * ha)
+            laugh_mouth.draw(light)
         else:
             opened, look_x, _ = eyes.update(t)
             light[:] = face
