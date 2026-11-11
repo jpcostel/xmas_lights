@@ -2,7 +2,7 @@ import array
 import math
 import random
 import utime
-from canvas import Canvas, _add, to_light
+from canvas import Canvas, to_light
 from grid import ROWS, COLS
 from shapes import Ellipse, Polygon, SOFT, ease
 
@@ -19,7 +19,10 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # his face scrolling back in behind them, laughing. Then he turns back
 # to the road as it zooms back out, and the sleigh takes off, flying
 # away up to the right, then comes back in from the left for a landing,
-# and round again. Light snow falls whenever we're zoomed out.
+# and round again. Light snow falls in the wide view, some behind
+# everything, some between the trees and the sleigh, some in front of it
+# all. Zooming in, it spreads out past you, and it's gone as soon as he
+# turns his head; it comes back once he's turned back to the road.
 #
 # Positions are in "close-up" units: at full zoom one unit is one LED,
 # x = column and y = row (0 = bottom), so the face's features land on
@@ -46,7 +49,7 @@ MITTENS = (0, 60, 12)
 GROUND = (60, 60, 72)
 EVERGREEN = (0, 32, 8)         # dim: they're background...
 FAR_EVERGREEN = (0, 20, 5)     # ...this one dimmer still: further back
-SNOWFLAKE = (40, 40, 48)       # very faint
+SNOWFLAKE = (255, 255, 255)    # mixed in faintly: see SNOW_ALPHA
 TRUNK = (40, 18, 4)
 REINDEER = (95, 48, 15)
 ANTLERS = (150, 110, 60)
@@ -197,8 +200,14 @@ LOOK_S = 0.25                  # moving from one to the next
 BLINK_AT_S = 4.0               # one blink, looking back at you
 BLINK_S = 0.3
 
-SNOWFLAKES = 18
-SNOW_FALL = (1.4, 2.4)         # rows/sec
+# Snow, in three layers back to front: behind everything, in front of the
+# trees but behind the sleigh, in front of it all. Each layer's
+# (flakes, fall speed factor, how fast it spreads out as we zoom in);
+# nearer flakes fall faster and spread more, so the layers look apart.
+SNOW_LAYERS = ((7, 0.75, 0.5), (7, 1.0, 1.0), (6, 1.3, 1.5))
+SNOW_FALL = (2.6, 4.2)         # rows/sec
+SNOW_ALPHA = 0.1               # how much of the way to white a flake takes its LED
+SNOW_FADE_S = 0.3              # going when his head starts turning, and coming back
 SNOW_SWAY = 0.3                # columns
 SNOW_SWAY_HZ = (0.2, 0.5)
 
@@ -348,34 +357,64 @@ class HoHoHo:
 # ============================================================
 
 class Snow:
-    """Faint flakes drifting down over the wide view, each shared between
-    the two rows it's between so it glides. They keep falling while
-    hidden, so the snow picks up where it would be when it comes back."""
+    """Faint flakes drifting down, each shared between the two rows it's
+    between so it glides, and mixed in over whatever is behind it so it
+    takes on its color. They keep falling while hidden, so the snow picks
+    up where it would be when it comes back."""
 
     def __init__(self):
-        self.flakes = [self._new(random.uniform(0, ROWS)) for _ in range(SNOWFLAKES)]
+        self.layers = [[self._new(random.uniform(0, ROWS), speed) for _ in range(n)]
+                       for n, speed, _ in SNOW_LAYERS]
         self.color = to_light(SNOWFLAKE)
+        self.t = 0.0
+        self.alpha = 0.0         # nothing until fall() says so
+        self.spread = 1.0        # how far we've zoomed in from the wide view
 
-    def _new(self, y):
-        return [random.uniform(0, COLS - 1), y, random.uniform(*SNOW_FALL),
+    def _new(self, y, speed):
+        return [random.uniform(0, COLS - 1), y, speed * random.uniform(*SNOW_FALL),
                 2 * math.pi * random.uniform(*SNOW_SWAY_HZ), random.uniform(0, 2 * math.pi)]
 
-    def draw(self, light, t, dt, visible=True):
+    def fall(self, t, dt, alpha):
+        """Move every flake on; alpha (0..1) is how much they show."""
+        self.t = t
+        self.alpha = alpha
+        for flakes, (_, speed, _) in zip(self.layers, SNOW_LAYERS):
+            for i, f in enumerate(flakes):
+                f[1] -= f[2] * dt
+                if f[1] < -1.0:
+                    flakes[i] = self._new(ROWS, speed)
+
+    def draw(self, light, layer, behind=False, mask=None):
+        """Draw one layer; behind: only on dark LEDs, so it's behind
+        what's already there; mask: not on the LEDs it marks."""
+        a0 = self.alpha * SNOW_ALPHA
+        if a0 <= 0.0:
+            return
         r, g, b = self.color
-        for i, f in enumerate(self.flakes):
-            f[1] -= f[2] * dt
-            if f[1] < -1.0:
-                f = self.flakes[i] = self._new(ROWS)
-            if not visible:
-                continue
-            col = int(f[0] + SNOW_SWAY * math.sin(f[3] * t + f[4]) + 0.5)
+        s = self.spread ** SNOW_LAYERS[layer][2]
+        t = self.t
+        for f in self.layers[layer]:
+            # Zooming in, flakes spread out from the middle, past us.
+            x = 12.0 + (f[0] + SNOW_SWAY * math.sin(f[3] * t + f[4]) - 12.0) * s
+            col = int(math.floor(x + 0.5))
             if not 0 <= col < COLS:
                 continue
-            row = int(math.floor(f[1]))
-            up = f[1] - row
+            y = 3.5 + (f[1] - 3.5) * s
+            row = int(math.floor(y))
+            up = y - row
             for rr, w in ((row, 1.0 - up), (row + 1, up)):
                 if 0 <= rr < ROWS and w > 0.0:
-                    _add(light, 3 * (rr * COLS + col), int(r * w), int(g * w), int(b * w))
+                    i = rr * COLS + col
+                    if mask and mask[i]:
+                        continue
+                    o = 3 * i
+                    vr, vg, vb = light[o], light[o + 1], light[o + 2]
+                    if behind and (vr or vg or vb):
+                        continue
+                    a = int(256 * a0 * w)
+                    light[o] = vr + (((r - vr) * a) >> 8)
+                    light[o + 1] = vg + (((g - vg) * a) >> 8)
+                    light[o + 2] = vb + (((b - vb) * a) >> 8)
 
 
 # ============================================================
@@ -386,6 +425,10 @@ def santa(strips):
     canvas = Canvas(strips)
     light = canvas.light
     parts = [Part(*part) for part in WORLD]
+    # The ground and trees are at the back of the world, so drawing them
+    # first keeps the order.
+    still = [part for part in parts if not part.flies]
+    flying = [part for part in parts if part.flies]
     pupils = [Ellipse(PUPIL, soft=CRISP) for _ in EYES]
     lids = [Ellipse(SKIN, soft=CRISP) for _ in EYES]
     lashes = [Ellipse(LASH, soft=CRISP) for _ in EYES]
@@ -399,14 +442,21 @@ def santa(strips):
 
     def paint(f, turn=0.0, with_pupils=True, fly_x=0.0, fly_y=0.0):
         zoom, cx, cy = _view(f)
+        snow.spread = zoom / WIDE[0]
         # In the wide view only the sleigh moves: the rest is painted once.
+        # Snow goes behind it all, then between the trees and the sleigh,
+        # then in front.
         if f == 0.0 and backdrop:
             light[:] = backdrop
-            moving = [part for part in parts if part.flies]
+            snow.draw(light, 0, behind=True)
         else:
             canvas.clear()
-            moving = parts
-        for part in moving:
+            snow.draw(light, 0)
+            for part in still:
+                part.place(zoom, cx, cy, turn, fly_x, fly_y)
+                part.draw(light)
+        snow.draw(light, 1)
+        for part in flying:
             part.place(zoom, cx, cy, turn, fly_x, fly_y)
             part.draw(light)
         if with_pupils:
@@ -415,16 +465,22 @@ def santa(strips):
                 pupil.set((x + fly_x - cx) * zoom + 12.0, (y + fly_y - cy) * zoom + 3.5,
                           rx * zoom, PUPIL_SIZE[1] * zoom, seen)
                 pupil.draw(light)
+        snow.draw(light, 2)
 
     # The still views, painted once.
     canvas.clear()
-    for part in parts:
-        if not part.flies:
-            part.place(*_view(0.0))
-            part.draw(light)
+    for part in still:
+        part.place(*_view(0.0))
+        part.draw(light)
     backdrop = array.array("H", light)
+    # The sleigh parked in the wide view, and which LEDs it's on, so the
+    # snow between it and the trees can go behind it.
     paint(0.0, PROFILE)
     wide = array.array("H", light)
+    on_sleigh = bytearray(ROWS * COLS)
+    for i in range(ROWS * COLS):
+        o = 3 * i
+        on_sleigh[i] = 1 if wide[o:o + 3] != backdrop[o:o + 3] else 0
     paint(1.0)
     face_open = array.array("H", light)
     paint(1.0, 0.0, with_pupils=False)
@@ -465,8 +521,23 @@ def santa(strips):
         dt = min(0.1, t - last_t)
         last_t = t
 
+        # Snow while the sleigh's side on, gone as soon as he starts to
+        # turn his head, back once he's turned back.
+        if what in ("land", "wide", "takeoff"):
+            snow_on = 1.0
+        elif what == "in":
+            snow_on = 1.0 - (age - TURN_START_S) / SNOW_FADE_S
+        elif what == "out":
+            snow_on = (age - (ZOOM_S - TURN_START_S)) / SNOW_FADE_S
+        else:
+            snow_on = 0.0
+        snow.fall(t, dt, max(0.0, min(1.0, snow_on)))
+
         if what == "wide":
             light[:] = wide
+            snow.draw(light, 0, behind=True)
+            snow.draw(light, 1, mask=on_sleigh)
+            snow.draw(light, 2)
         elif what == "in":
             # He turns to face us partway into the zoom...
             paint(ease(age / ZOOM_S), PROFILE * (1.0 - ease((age - TURN_START_S) / TURN_S)))
@@ -498,7 +569,6 @@ def santa(strips):
                 light[o] = light[o + 1] = light[o + 2] = 0
             for cheek in laugh_cheeks:
                 cheek.draw(light)
-            # (Not "wide": that's the wide view's picture.)
             stretch = LAUGH_WIDE[0] + LAUGH_WIDE[1] * abs(math.sin(math.pi * LAUGH_HZ * age))
             laugh_mouth.set([(HEAD_X + (x - HEAD_X) * stretch, y) for x, y in LAUGH_PTS])
             laugh_mouth.draw(light)
@@ -526,8 +596,6 @@ def santa(strips):
                     lids[i].draw(light)
                     lashes[i].set(x, y - 0.5, EYE_SIZE[0] * 0.9, 0.45, shut)
                     lashes[i].draw(light)
-        # Snow only in the wide view, not while zooming or close up.
-        snow.draw(light, t, dt, what in ("land", "wide", "takeoff"))
         canvas.show()
 
         elapsed = utime.ticks_diff(utime.ticks_ms(), frame_start)
