@@ -2,7 +2,7 @@ import array
 import math
 import random
 import utime
-from canvas import Canvas, to_light
+from canvas import Canvas, _add, to_light
 from grid import ROWS, COLS
 from shapes import Ellipse, Polygon, SOFT, ease
 
@@ -19,7 +19,7 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # his face scrolling back in behind them, laughing. Then he turns back
 # to the road as it zooms back out, and the sleigh takes off, flying
 # away up to the right, then comes back in from the left for a landing,
-# and round again.
+# and round again. Light snow falls all the while.
 #
 # Positions are in "close-up" units: at full zoom one unit is one LED,
 # x = column and y = row (0 = bottom), so the face's features land on
@@ -35,8 +35,7 @@ NOSE = (210, 25, 15)
 EYE = (0, 0, 0)
 PUPIL = (200, 200, 200)
 LASH = (20, 5, 0)
-MOUTH = (25, 0, 0)
-TONGUE = (170, 25, 25)
+MOUTH = (80, 6, 6)
 BEARD = (120, 120, 120)
 MOUSTACHE = (200, 200, 200)
 FUR = (170, 170, 165)
@@ -47,6 +46,7 @@ MITTENS = (0, 60, 12)
 GROUND = (60, 60, 72)
 EVERGREEN = (0, 32, 8)         # dim: they're background...
 FAR_EVERGREEN = (0, 20, 5)     # ...this one dimmer still: further back
+SNOWFLAKE = (40, 40, 48)       # very faint
 TRUNK = (40, 18, 4)
 REINDEER = (95, 48, 15)
 ANTLERS = (150, 110, 60)
@@ -62,12 +62,13 @@ EYE_SIZE = (1.6, 1.05)
 PUPIL_SIZE = (0.55, 1.05)
 # Laughing eyes, squeezed into happy arcs: the LEDs (column, row) of ^ ^.
 LAUGH_EYES = [(9, 5), (8, 4), (10, 4), (15, 5), (14, 4), (16, 4)]
-# The mouth: a wide, open smile, flat under the moustache and curving
-# down to the bottom row, with a tongue; laughing, it stretches wider
-# with each ha.
-MOUTH_PTS = [(8.2, 1.7), (15.8, 1.7), (15.0, 0.5), (13.3, -0.4), (10.7, -0.4), (9.0, 0.5)]
-TONGUE_AT = (12.0, 0.2, 1.8, 0.5)
-LAUGH_WIDE = (1.05, 0.15)      # laughing, the mouth this much wider, plus this at each ha
+# The mouth: a thin smile, along the bottom row with its corners turned
+# up a row. Laughing, it opens: flat under the moustache, curving down
+# to the bottom row, stretching wider with each ha.
+SMILE_PTS = [(9.6, 0.45), (14.4, 0.45), (14.4, -0.45), (9.6, -0.45)]
+SMILE_CORNERS = [(9.0, 1.0), (15.0, 1.0)]
+LAUGH_PTS = [(9.0, 1.5), (15.0, 1.5), (14.2, 0.3), (12.8, -0.4), (11.2, -0.4), (9.8, 0.3)]
+LAUGH_WIDE = (1.0, 0.12)       # laughing, the mouth this much wider, plus this at each ha
 CRISP = 0.45                   # edge softness of the small features
 
 # The face's features sit on a rounded head: those with a depth (how
@@ -130,13 +131,7 @@ WORLD = (
         ("poly", FUR, [(16.6, -0.5), (18.0, -1.5), (18.0, -8.0), (16.6, -8.0)]),
         ("ellipse", RED, (18.5, -1.8, 5.0, 2.3)),
         ("ellipse", MITTENS, (23.0, -2.3, 1.9, 1.9)),
-        # ...the sleigh in front of him, on gold runners...
-        ("poly", SLEIGH, [(-9.0, 4.0), (-3.0, 3.0), (-3.0, -8.1), (-6.5, -8.1)]),
-        ("poly", SLEIGH, [(-6.0, -3.0), (27.0, -3.0), (29.0, -8.1), (-4.5, -8.1)]),
-        ("ellipse", SLEIGH, (29.5, -3.0, 3.0, 2.8)),
-        ("poly", GOLD, [(-4.0, -9.9), (28.0, -9.9), (28.0, -10.9), (-4.0, -10.9)]),
-        ("ellipse", GOLD, (29.5, -9.1, 1.9, 1.9)),
-        # ...and his head: beard and hair, the face, then its features.
+        # ...his head: beard and hair, the face, then its features...
         ("ellipse", BEARD, (12.0, -1.0, 8.8, 5.0), BEARD_DEPTH),
         ("ellipse", BEARD, (5.6, 4.4, 1.3, 1.6)),
         ("ellipse", BEARD, (18.4, 4.4, 1.3, 1.6)),
@@ -145,13 +140,21 @@ WORLD = (
         ("ellipse", CHEEKS, (16.6, 3.0, 1.5, 0.8, 0.55), FACE_DEPTH),
         ("crisp", EYE, EYES[0] + EYE_SIZE, FACE_DEPTH),
         ("crisp", EYE, EYES[1] + EYE_SIZE, FACE_DEPTH),
-        ("crisp poly", MOUTH, MOUTH_PTS, FACE_DEPTH),
-        ("crisp", TONGUE, TONGUE_AT, FACE_DEPTH),
+        ("crisp poly", MOUTH, SMILE_PTS, FACE_DEPTH),
+        ("crisp", MOUTH, SMILE_CORNERS[0] + (0.45, 0.45), FACE_DEPTH),
+        ("crisp", MOUTH, SMILE_CORNERS[1] + (0.45, 0.45), FACE_DEPTH),
         ("crisp", MOUSTACHE, (9.5, 2.0, 3.1, 0.75), FACE_DEPTH),
         ("crisp", MOUSTACHE, (14.5, 2.0, 3.1, 0.75), FACE_DEPTH),
         ("crisp", NOSE, (12.0, 3.0, 1.5, 0.65), NOSE_DEPTH),
-        # The hat's soft fur trim: one row across his head, close up.
+        # ...the hat's soft fur trim: one row across his head, close up...
         ("ellipse", FUR, (12.0, 6.1, 6.6, 0.45)),
+        # ...and the sleigh in front of him, hiding the bottom of his
+        # beard, on gold runners.
+        ("poly", SLEIGH, [(-9.0, 4.0), (-3.0, 3.0), (-3.0, -8.1), (-6.5, -8.1)]),
+        ("poly", SLEIGH, [(-6.0, -2.0), (27.0, -2.0), (29.0, -8.1), (-4.5, -8.1)]),
+        ("ellipse", SLEIGH, (29.5, -2.2, 3.0, 2.8)),
+        ("poly", GOLD, [(-4.0, -9.9), (28.0, -9.9), (28.0, -10.9), (-4.0, -10.9)]),
+        ("ellipse", GOLD, (29.5, -9.1, 1.9, 1.9)),
     ]
 )
 
@@ -194,6 +197,11 @@ LOOK_S = 0.25                  # moving from one to the next
 BLINK_AT_S = 4.0               # one blink, looking back at you
 BLINK_S = 0.3
 
+SNOWFLAKES = 18
+SNOW_FALL = (0.6, 1.2)         # rows/sec
+SNOW_SWAY = 0.3                # columns
+SNOW_SWAY_HZ = (0.2, 0.5)
+
 FRAME_MS = 16                  # ~60 FPS
 
 
@@ -209,7 +217,7 @@ class Part:
         self.where = where
         self.depth = depth
         # The ground and trees stay put when the sleigh flies.
-        self.flies = color not in (GROUND, EVERGREEN, TRUNK)
+        self.flies = color not in (GROUND, EVERGREEN, FAR_EVERGREEN, TRUNK)
         soft = CRISP if kind.startswith("crisp") else SOFT
         if kind.endswith("poly"):
             self.shape = Polygon(color, sides=len(where), soft=soft)
@@ -336,6 +344,38 @@ class HoHoHo:
 
 
 # ============================================================
+# SNOW
+# ============================================================
+
+class Snow:
+    """Faint flakes drifting down over everything, each shared between
+    the two rows it's between so it glides."""
+
+    def __init__(self):
+        self.flakes = [self._new(random.uniform(0, ROWS)) for _ in range(SNOWFLAKES)]
+        self.color = to_light(SNOWFLAKE)
+
+    def _new(self, y):
+        return [random.uniform(0, COLS - 1), y, random.uniform(*SNOW_FALL),
+                2 * math.pi * random.uniform(*SNOW_SWAY_HZ), random.uniform(0, 2 * math.pi)]
+
+    def draw(self, light, t, dt):
+        r, g, b = self.color
+        for i, f in enumerate(self.flakes):
+            f[1] -= f[2] * dt
+            if f[1] < -1.0:
+                f = self.flakes[i] = self._new(ROWS)
+            col = int(f[0] + SNOW_SWAY * math.sin(f[3] * t + f[4]) + 0.5)
+            if not 0 <= col < COLS:
+                continue
+            row = int(math.floor(f[1]))
+            up = f[1] - row
+            for rr, w in ((row, 1.0 - up), (row + 1, up)):
+                if 0 <= rr < ROWS and w > 0.0:
+                    _add(light, 3 * (rr * COLS + col), int(r * w), int(g * w), int(b * w))
+
+
+# ============================================================
 # MAIN EFFECT LOOP
 # ============================================================
 
@@ -347,8 +387,9 @@ def santa(strips):
     lids = [Ellipse(SKIN, soft=CRISP) for _ in EYES]
     lashes = [Ellipse(LASH, soft=CRISP) for _ in EYES]
     laugh_cheeks = [Ellipse(CHEEKS, x, 3.0, 1.6, 0.9, 0.6) for x in (7.4, 16.6)]
-    laugh_mouth = Polygon(MOUTH, sides=len(MOUTH_PTS), soft=CRISP)
-    laugh_tongue = Ellipse(TONGUE, *TONGUE_AT, soft=CRISP)
+    laugh_mouth = Polygon(MOUTH, sides=len(LAUGH_PTS), soft=CRISP)
+    snow = Snow()
+    last_t = 0.0
     script_s = sum(hold for _, hold in LOOK_SCRIPT)
 
     backdrop = None              # the ground and trees in the wide view
@@ -418,6 +459,8 @@ def santa(strips):
                 hold = script_s
         what = phases[phase]
         age = t - start
+        dt = min(0.1, t - last_t)
+        last_t = t
 
         if what == "wide":
             light[:] = wide
@@ -452,11 +495,10 @@ def santa(strips):
                 light[o] = light[o + 1] = light[o + 2] = 0
             for cheek in laugh_cheeks:
                 cheek.draw(light)
-            ha = abs(math.sin(math.pi * LAUGH_HZ * age))
-            wide = LAUGH_WIDE[0] + LAUGH_WIDE[1] * ha
-            laugh_mouth.set([(HEAD_X + (x - HEAD_X) * wide, y) for x, y in MOUTH_PTS])
+            # (Not "wide": that's the wide view's picture.)
+            stretch = LAUGH_WIDE[0] + LAUGH_WIDE[1] * abs(math.sin(math.pi * LAUGH_HZ * age))
+            laugh_mouth.set([(HEAD_X + (x - HEAD_X) * stretch, y) for x, y in LAUGH_PTS])
             laugh_mouth.draw(light)
-            laugh_tongue.draw(light)
         else:
             # Close up: the eyes follow the script, with one blink.
             look_x = 0.0
@@ -481,6 +523,7 @@ def santa(strips):
                     lids[i].draw(light)
                     lashes[i].set(x, y - 0.5, EYE_SIZE[0] * 0.9, 0.45, shut)
                     lashes[i].draw(light)
+        snow.draw(light, t, dt)
         canvas.show()
 
         elapsed = utime.ticks_diff(utime.ticks_ms(), frame_start)
