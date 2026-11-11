@@ -19,7 +19,7 @@ from shapes import Ellipse, Polygon, SOFT, ease
 # his face scrolling back in behind them, laughing. Then he turns back
 # to the road as it zooms back out, and the sleigh takes off, flying
 # away up to the right, then comes back in from the left for a landing,
-# and round again. Light snow falls all the while.
+# and round again. Light snow falls whenever we're zoomed out.
 #
 # Positions are in "close-up" units: at full zoom one unit is one LED,
 # x = column and y = row (0 = bottom), so the face's features land on
@@ -198,7 +198,7 @@ BLINK_AT_S = 4.0               # one blink, looking back at you
 BLINK_S = 0.3
 
 SNOWFLAKES = 18
-SNOW_FALL = (0.6, 1.2)         # rows/sec
+SNOW_FALL = (1.4, 2.4)         # rows/sec
 SNOW_SWAY = 0.3                # columns
 SNOW_SWAY_HZ = (0.2, 0.5)
 
@@ -348,8 +348,9 @@ class HoHoHo:
 # ============================================================
 
 class Snow:
-    """Faint flakes drifting down over everything, each shared between
-    the two rows it's between so it glides."""
+    """Faint flakes drifting down over the wide view, each shared between
+    the two rows it's between so it glides. They keep falling while
+    hidden, so the snow picks up where it would be when it comes back."""
 
     def __init__(self):
         self.flakes = [self._new(random.uniform(0, ROWS)) for _ in range(SNOWFLAKES)]
@@ -359,12 +360,14 @@ class Snow:
         return [random.uniform(0, COLS - 1), y, random.uniform(*SNOW_FALL),
                 2 * math.pi * random.uniform(*SNOW_SWAY_HZ), random.uniform(0, 2 * math.pi)]
 
-    def draw(self, light, t, dt):
+    def draw(self, light, t, dt, visible=True):
         r, g, b = self.color
         for i, f in enumerate(self.flakes):
             f[1] -= f[2] * dt
             if f[1] < -1.0:
                 f = self.flakes[i] = self._new(ROWS)
+            if not visible:
+                continue
             col = int(f[0] + SNOW_SWAY * math.sin(f[3] * t + f[4]) + 0.5)
             if not 0 <= col < COLS:
                 continue
@@ -523,7 +526,8 @@ def santa(strips):
                     lids[i].draw(light)
                     lashes[i].set(x, y - 0.5, EYE_SIZE[0] * 0.9, 0.45, shut)
                     lashes[i].draw(light)
-        snow.draw(light, t, dt)
+        # Snow only in the wide view, not while zooming or close up.
+        snow.draw(light, t, dt, what in ("land", "wide", "takeoff"))
         canvas.show()
 
         elapsed = utime.ticks_diff(utime.ticks_ms(), frame_start)
